@@ -120,30 +120,39 @@ export default function EditorPage() {
                     onClick={() => setActiveId(ch.id)}
                   >
                     <FileText className="w-4 h-4 shrink-0" />
-                    {editingId === ch.id ? (
-                      <Input
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        onBlur={commitRename}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commitRename();
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                        className="h-6 text-xs px-1 py-0"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    ) : (
-                      <span
-                        className="text-sm truncate flex-1"
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          startRename(ch.id, ch.title);
-                        }}
-                      >
-                        {ch.title}
-                      </span>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      {editingId === ch.id ? (
+                        <Input
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename();
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                          className="h-6 text-xs px-1 py-0"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <>
+                          <span
+                            className="text-sm truncate block"
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              startRename(ch.id, ch.title);
+                            }}
+                          >
+                            {ch.title}
+                          </span>
+                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70">
+                            <span>{ch.content.trim().split(/\s+/).filter(Boolean).length} pal.</span>
+                            <span>·</span>
+                            <span>{new Date(ch.updatedAt).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     {chapters.length > 1 && (
                       <button
                         className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
