@@ -1,17 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useManuscript } from "@/hooks/useManuscript";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import AiCorrectionPanel from "@/components/editor/AiCorrectionPanel";
 import {
   AlertDialog,
   AlertDialogAction,
