@@ -1,13 +1,5 @@
-import AppSidebar from "@/components/AppSidebar";
-import Dashboard from "@/pages/Dashboard";
-
-const Index = () => {
-  return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar />
-      <Dashboard />
-    </div>
-  );
-};
-
+// This file is no longer the main entry — see App.tsx routes
+// Kept for backwards compatibility
+import { Navigate } from "react-router-dom";
+const Index = () => <Navigate to="/" replace />;
 export default Index;
