@@ -53,6 +53,16 @@ export default function EditorPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [spellLang, setSpellLang] = useState("es");
+
+  const spellLangs = [
+    { code: "es", label: "Español" },
+    { code: "en", label: "English" },
+    { code: "fr", label: "Français" },
+    { code: "pt", label: "Português" },
+    { code: "de", label: "Deutsch" },
+  ];
+  const [editingTitle, setEditingTitle] = useState("");
 
   const handleSave = () => {
     toast({ title: "Guardado", description: "El capítulo se ha guardado correctamente." });
