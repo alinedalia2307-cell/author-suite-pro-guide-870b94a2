@@ -1,17 +1,11 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useManuscript } from "@/hooks/useManuscript";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import AiCorrectionPanel from "@/components/editor/AiCorrectionPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +60,17 @@ export default function EditorPage() {
   const handleSave = () => {
     toast({ title: "Guardado", description: "El capítulo se ha guardado correctamente." });
   };
+
+  const handleApplyCorrection = useCallback(
+    (original: string, suggestion: string) => {
+      if (!activeChapter) return;
+      const newContent = activeChapter.content.replace(original, suggestion);
+      if (newContent !== activeChapter.content) {
+        updateContent(newContent);
+      }
+    },
+    [activeChapter, updateContent]
+  );
 
   const startRename = (id: string, title: string) => {
     setEditingId(id);
@@ -220,29 +225,14 @@ export default function EditorPage() {
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      {/* AI Dialog */}
-      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-gold" />
-              Corrección con IA
-            </DialogTitle>
-            <DialogDescription>
-              Para habilitar la corrección inteligente de tu manuscrito, necesitas conectar
-              Lovable Cloud. Esto permitirá analizar gramática, estilo y coherencia de tu texto
-              usando inteligencia artificial.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="rounded-lg border border-gold/20 bg-gold/5 p-4 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">Próximamente disponible</p>
-            <p>
-              Activa Lovable Cloud para desbloquear corrección ortográfica, sugerencias de
-              estilo y mejoras de redacción impulsadas por IA.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* AI Correction Panel */}
+      <AiCorrectionPanel
+        open={aiDialogOpen}
+        onOpenChange={setAiDialogOpen}
+        text={activeChapter?.content ?? ""}
+        lang={spellLang}
+        onApplyCorrection={handleApplyCorrection}
+      />
 
       {/* Delete confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>

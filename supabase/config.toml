@@ -1,1 +1,4 @@
 project_id = "qwouibobnflmamtgfptu"
+
+[functions.correct-manuscript]
+verify_jwt = false
