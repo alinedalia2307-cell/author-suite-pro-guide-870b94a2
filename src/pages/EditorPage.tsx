@@ -62,7 +62,6 @@ export default function EditorPage() {
     { code: "pt", label: "Português" },
     { code: "de", label: "Deutsch" },
   ];
-  const [editingTitle, setEditingTitle] = useState("");
 
   const handleSave = () => {
     toast({ title: "Guardado", description: "El capítulo se ha guardado correctamente." });
