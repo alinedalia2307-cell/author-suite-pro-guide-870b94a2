@@ -180,6 +180,8 @@ export default function EditorPage() {
               value={activeChapter?.content ?? ""}
               onChange={(e) => updateContent(e.target.value)}
               placeholder="Comienza a escribir tu manuscrito aquí…"
+              spellCheck={true}
+              lang={spellLang}
               className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 p-6 text-base leading-relaxed font-body bg-background"
               style={{ fontFamily: "'Source Sans 3', sans-serif" }}
             />
