@@ -53,6 +53,15 @@ export default function EditorPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
+  const [spellLang, setSpellLang] = useState("es");
+
+  const spellLangs = [
+    { code: "es", label: "Español" },
+    { code: "en", label: "English" },
+    { code: "fr", label: "Français" },
+    { code: "pt", label: "Português" },
+    { code: "de", label: "Deutsch" },
+  ];
 
   const handleSave = () => {
     toast({ title: "Guardado", description: "El capítulo se ha guardado correctamente." });
@@ -180,6 +189,8 @@ export default function EditorPage() {
               value={activeChapter?.content ?? ""}
               onChange={(e) => updateContent(e.target.value)}
               placeholder="Comienza a escribir tu manuscrito aquí…"
+              spellCheck={true}
+              lang={spellLang}
               className="flex-1 resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 p-6 text-base leading-relaxed font-body bg-background"
               style={{ fontFamily: "'Source Sans 3', sans-serif" }}
             />
@@ -189,9 +200,20 @@ export default function EditorPage() {
                 <span>{wordCount.toLocaleString()} palabras</span>
                 <span>{charCount.toLocaleString()} caracteres</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Check className="w-3 h-3 text-gold" />
-                <span>Autoguardado</span>
+              <div className="flex items-center gap-3">
+                <select
+                  value={spellLang}
+                  onChange={(e) => setSpellLang(e.target.value)}
+                  className="bg-transparent border border-border rounded px-1.5 py-0.5 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {spellLangs.map((l) => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-gold" />
+                  <span>Autoguardado</span>
+                </div>
               </div>
             </div>
           </div>
