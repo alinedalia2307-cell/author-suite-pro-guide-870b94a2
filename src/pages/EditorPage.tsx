@@ -61,6 +61,17 @@ export default function EditorPage() {
     toast({ title: "Guardado", description: "El capítulo se ha guardado correctamente." });
   };
 
+  const handleApplyCorrection = useCallback(
+    (original: string, suggestion: string) => {
+      if (!activeChapter) return;
+      const newContent = activeChapter.content.replace(original, suggestion);
+      if (newContent !== activeChapter.content) {
+        updateContent(newContent);
+      }
+    },
+    [activeChapter, updateContent]
+  );
+
   const startRename = (id: string, title: string) => {
     setEditingId(id);
     setEditingTitle(title);
