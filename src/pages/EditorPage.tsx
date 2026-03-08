@@ -200,9 +200,20 @@ export default function EditorPage() {
                 <span>{wordCount.toLocaleString()} palabras</span>
                 <span>{charCount.toLocaleString()} caracteres</span>
               </div>
-              <div className="flex items-center gap-1">
-                <Check className="w-3 h-3 text-gold" />
-                <span>Autoguardado</span>
+              <div className="flex items-center gap-3">
+                <select
+                  value={spellLang}
+                  onChange={(e) => setSpellLang(e.target.value)}
+                  className="bg-transparent border border-border rounded px-1.5 py-0.5 text-xs text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  {spellLangs.map((l) => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <Check className="w-3 h-3 text-gold" />
+                  <span>Autoguardado</span>
+                </div>
               </div>
             </div>
           </div>
