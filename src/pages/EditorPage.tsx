@@ -73,6 +73,20 @@ export default function EditorPage() {
     [activeChapter, updateContent]
   );
 
+  const handleApplyAll = useCallback(
+    (corrections: { original: string; suggestion: string }[]) => {
+      if (!activeChapter) return;
+      let content = activeChapter.content;
+      for (const { original, suggestion } of corrections) {
+        content = content.replace(original, suggestion);
+      }
+      if (content !== activeChapter.content) {
+        updateContent(content);
+      }
+    },
+    [activeChapter, updateContent]
+  );
+
   const startRename = (id: string, title: string) => {
     setEditingId(id);
     setEditingTitle(title);
