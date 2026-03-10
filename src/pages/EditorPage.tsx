@@ -247,6 +247,7 @@ export default function EditorPage() {
         text={activeChapter?.content ?? ""}
         lang={spellLang}
         onApplyCorrection={handleApplyCorrection}
+        onApplyAll={handleApplyAll}
       />
 
       {/* Delete confirmation */}
