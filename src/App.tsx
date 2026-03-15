@@ -5,11 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "@/components/MainLayout";
 import Dashboard from "./pages/Dashboard";
-import EditorPage from "./pages/EditorPage";
-import OrganizarPage from "./pages/OrganizarPage";
-import MaquetarPage from "./pages/MaquetarPage";
-import PortadaPage from "./pages/PortadaPage";
-import TraducirPage from "./pages/TraducirPage";
+import MisLibrosPage from "./pages/MisLibrosPage";
+import SubirManuscritoPage from "./pages/SubirManuscritoPage";
+import CorreccionPage from "./pages/CorreccionPage";
+import MaquetacionPage from "./pages/MaquetacionPage";
 import PublicarPage from "./pages/PublicarPage";
 import AjustesPage from "./pages/AjustesPage";
 import NotFound from "./pages/NotFound";
@@ -25,11 +24,10 @@ const App = () => (
         <Routes>
           <Route element={<MainLayout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/editor" element={<EditorPage />} />
-            <Route path="/organizar" element={<OrganizarPage />} />
-            <Route path="/maquetar" element={<MaquetarPage />} />
-            <Route path="/portada" element={<PortadaPage />} />
-            <Route path="/traducir" element={<TraducirPage />} />
+            <Route path="/mis-libros" element={<MisLibrosPage />} />
+            <Route path="/subir-manuscrito" element={<SubirManuscritoPage />} />
+            <Route path="/correccion" element={<CorreccionPage />} />
+            <Route path="/maquetacion" element={<MaquetacionPage />} />
             <Route path="/publicar" element={<PublicarPage />} />
             <Route path="/ajustes" element={<AjustesPage />} />
           </Route>

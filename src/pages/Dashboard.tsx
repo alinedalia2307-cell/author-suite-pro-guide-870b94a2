@@ -1,19 +1,17 @@
 import { useNavigate } from "react-router-dom";
-import { PenTool, LayoutGrid, BookOpen, BookImage, Languages, Upload, TrendingUp, FileText, Clock } from "lucide-react";
+import { Upload, SpellCheck, Palette, Globe, BookOpen, FileText, Clock, TrendingUp } from "lucide-react";
 import FeatureCard from "@/components/FeatureCard";
 import heroImg from "@/assets/hero-illustration.png";
 
 const features = [
-  { icon: PenTool, title: "Editor de Manuscritos", description: "Edita y corrige tu manuscrito con herramientas avanzadas de escritura.", to: "/editor", count: 3, countLabel: "en progreso" },
-  { icon: LayoutGrid, title: "Organizar Libro", description: "Estructura capítulos, escenas y notas de tu obra.", to: "/organizar", count: 12, countLabel: "capítulos" },
-  { icon: BookOpen, title: "Maquetación", description: "Da formato profesional a tu contenido para imprenta o digital.", to: "/maquetar", count: 1, countLabel: "plantilla activa" },
-  { icon: BookImage, title: "Generar Portada", description: "Crea portadas atractivas con plantillas y herramientas de diseño.", to: "/portada", count: 5, countLabel: "diseños guardados" },
-  { icon: Languages, title: "Traducción", description: "Traduce tu obra a múltiples idiomas de forma rápida.", to: "/traducir", count: 2, countLabel: "idiomas" },
-  { icon: Upload, title: "Publicar", description: "Publica en Amazon, Apple Books, Google Play y más plataformas.", to: "/publicar", count: 0, countLabel: "publicados" },
+  { icon: Upload, title: "Subir Manuscrito", description: "Sube tu manuscrito en Word, PDF o texto plano para comenzar.", to: "/subir-manuscrito", count: 0, countLabel: "pendientes" },
+  { icon: SpellCheck, title: "Corrección Ortotipográfica", description: "Revisa gramática, ortografía y estilo con ayuda de IA.", to: "/correccion", count: 3, countLabel: "en progreso" },
+  { icon: Palette, title: "Maquetación y Portada", description: "Formato profesional y diseño de portada para tu libro.", to: "/maquetacion", count: 1, countLabel: "plantilla activa" },
+  { icon: Globe, title: "Publicación Online", description: "Publica en Amazon, Apple Books, Google Play y más.", to: "/publicar", count: 0, countLabel: "publicados" },
 ];
 
 const stats = [
-  { icon: FileText, label: "Manuscritos", value: "3" },
+  { icon: BookOpen, label: "Libros", value: "3" },
   { icon: TrendingUp, label: "Palabras hoy", value: "1,247" },
   { icon: Clock, label: "Tiempo editando", value: "2h 15m" },
 ];
@@ -29,7 +27,7 @@ export default function Dashboard() {
             Bienvenido a <span className="text-gradient-gold">Author Suite Pro</span>
           </h1>
           <p className="text-primary-foreground/70 text-lg max-w-xl">
-            Tu estudio completo para escribir, organizar y publicar tu próximo libro.
+            Convierte tu manuscrito en un libro listo para publicar.
           </p>
           <div className="flex flex-wrap gap-6 mt-6">
             {stats.map((stat) => (
@@ -47,8 +45,8 @@ export default function Dashboard() {
       </div>
 
       <div className="p-8">
-        <h2 className="font-display text-xl font-semibold text-foreground mb-6">Herramientas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        <h2 className="font-display text-xl font-semibold text-foreground mb-6">Flujo de trabajo</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
           {features.map((feat, i) => (
             <div key={feat.to} className="animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
               <FeatureCard
