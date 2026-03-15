@@ -1,27 +1,26 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  BookOpen,
-  PenTool,
-  LayoutGrid,
-  BookImage,
-  Languages,
-  Upload,
   Home,
+  BookOpen,
+  Upload,
+  SpellCheck,
+  Palette,
+  Globe,
   Settings,
   ChevronLeft,
   ChevronRight,
+  PenTool,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/", icon: Home, label: "Inicio" },
-  { to: "/editor", icon: PenTool, label: "Editor" },
-  { to: "/organizar", icon: LayoutGrid, label: "Organizar" },
-  { to: "/maquetar", icon: BookOpen, label: "Maquetar" },
-  { to: "/portada", icon: BookImage, label: "Portada" },
-  { to: "/traducir", icon: Languages, label: "Traducir" },
-  { to: "/publicar", icon: Upload, label: "Publicar" },
+  { to: "/mis-libros", icon: BookOpen, label: "Mis libros" },
+  { to: "/subir-manuscrito", icon: Upload, label: "Subir manuscrito" },
+  { to: "/correccion", icon: SpellCheck, label: "Corrección" },
+  { to: "/maquetacion", icon: Palette, label: "Maquetación" },
+  { to: "/publicar", icon: Globe, label: "Publicar" },
 ];
 
 export default function AppSidebar() {
