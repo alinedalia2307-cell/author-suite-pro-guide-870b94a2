@@ -47,6 +47,47 @@ export type Database = {
         }
         Relationships: []
       }
+      manuscripts: {
+        Row: {
+          book_id: string
+          content: string
+          created_at: string
+          id: string
+          original_filename: string | null
+          source: string
+          updated_at: string
+          word_count: number
+        }
+        Insert: {
+          book_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          original_filename?: string | null
+          source?: string
+          updated_at?: string
+          word_count?: number
+        }
+        Update: {
+          book_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          original_filename?: string | null
+          source?: string
+          updated_at?: string
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manuscripts_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: true
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
