@@ -67,7 +67,15 @@ export default function LibroDetailPage() {
             ))}
           </TabsList>
 
-          {phases.map((phase) => (
+          {/* Manuscrito – real editor */}
+          <TabsContent value="manuscrito">
+            <Card className="p-6 min-h-[400px]">
+              <ManuscriptEditor bookId={book.id} />
+            </Card>
+          </TabsContent>
+
+          {/* Other phases – placeholder */}
+          {phases.filter(p => p.value !== "manuscrito").map((phase) => (
             <TabsContent key={phase.value} value={phase.value}>
               <Card className="p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
