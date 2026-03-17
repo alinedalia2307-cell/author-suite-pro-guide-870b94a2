@@ -68,10 +68,10 @@ export default function LibroDetailPage() {
           </TabsList>
 
           {/* Manuscrito – real editor */}
-          <TabsContent value="manuscrito">
-            <Card className="p-6 min-h-[400px]">
+          <TabsContent value="manuscrito" className="mt-0">
+            <div className="rounded-lg border border-border overflow-hidden">
               <ManuscriptEditor bookId={book.id} />
-            </Card>
+            </div>
           </TabsContent>
 
           {/* Other phases – placeholder */}

@@ -4,7 +4,6 @@ import {
   Plus, ChevronUp, ChevronDown, Trash2, Pencil, Check, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,6 +39,8 @@ export default function ManuscriptEditor({ bookId }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
+  const activeChapter = chapters.find((c) => c.id === activeId);
+
   // ── File import ──
   const handleFile = useCallback(
     async (file: File) => {
@@ -47,7 +48,6 @@ export default function ManuscriptEditor({ bookId }: Props) {
       try {
         const ext = file.name.split(".").pop()?.toLowerCase();
         let text = "";
-
         if (ext === "txt") {
           text = await file.text();
         } else if (ext === "docx") {
@@ -59,16 +59,11 @@ export default function ManuscriptEditor({ bookId }: Props) {
           setImporting(false);
           return;
         }
-
-        // Import as content of current chapter, or create one
         if (activeId) {
           updateContent(text);
         } else {
           addChapter.mutate(undefined, {
-            onSuccess: () => {
-              // Will be set as active automatically, then update content
-              setTimeout(() => updateContent(text), 300);
-            },
+            onSuccess: () => setTimeout(() => updateContent(text), 300),
           });
         }
         toast({ title: "Archivo importado", description: file.name });
@@ -110,73 +105,65 @@ export default function ManuscriptEditor({ bookId }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  // ── No chapters yet ──
+  // ── Empty state ──
   if (chapters.length === 0) {
     return (
       <div
-        className="grid gap-4 sm:grid-cols-3 min-h-[300px]"
+        className="grid gap-6 sm:grid-cols-3 min-h-[350px] py-8"
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
       >
         <input ref={fileInputRef} type="file" accept=".docx,.txt" className="hidden" onChange={onFileChange} />
-
-        <Card
-          className="flex flex-col items-center justify-center gap-3 p-8 cursor-pointer border-dashed border-2 hover:border-primary/50 hover:bg-muted/40 transition-colors"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          {importing ? <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" /> : <Upload className="w-10 h-10 text-muted-foreground" />}
-          <span className="font-medium text-foreground">Subir archivo</span>
-          <span className="text-xs text-muted-foreground">.docx o .txt</span>
-        </Card>
-
-        <Card
-          className="flex flex-col items-center justify-center gap-3 p-8 cursor-pointer border-dashed border-2 hover:border-primary/50 hover:bg-muted/40 transition-colors"
-          onClick={() => addChapter.mutate()}
-        >
-          <FileText className="w-10 h-10 text-muted-foreground" />
-          <span className="font-medium text-foreground">Pegar texto</span>
-          <span className="text-xs text-muted-foreground">Crea un capítulo y pega</span>
-        </Card>
-
-        <Card
-          className="flex flex-col items-center justify-center gap-3 p-8 cursor-pointer border-dashed border-2 hover:border-primary/50 hover:bg-muted/40 transition-colors"
-          onClick={() => addChapter.mutate()}
-        >
-          <PenLine className="w-10 h-10 text-muted-foreground" />
-          <span className="font-medium text-foreground">Escribir desde cero</span>
-          <span className="text-xs text-muted-foreground">Capítulo en blanco</span>
-        </Card>
+        {[
+          { icon: Upload, label: "Subir archivo", sub: ".docx o .txt", action: () => fileInputRef.current?.click() },
+          { icon: FileText, label: "Pegar texto", sub: "Crea un capítulo y pega", action: () => addChapter.mutate() },
+          { icon: PenLine, label: "Escribir desde cero", sub: "Capítulo en blanco", action: () => addChapter.mutate() },
+        ].map((item) => (
+          <Card
+            key={item.label}
+            className="flex flex-col items-center justify-center gap-3 p-10 cursor-pointer border-dashed border-2 border-border hover:border-accent/50 hover:bg-secondary/40 transition-all duration-200"
+            onClick={item.action}
+          >
+            {importing && item.icon === Upload ? (
+              <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+            ) : (
+              <item.icon className="w-10 h-10 text-muted-foreground" />
+            )}
+            <span className="font-medium text-foreground">{item.label}</span>
+            <span className="text-xs text-muted-foreground">{item.sub}</span>
+          </Card>
+        ))}
       </div>
     );
   }
 
-  // ── Editor with chapter sidebar ──
+  // ── Editor layout ──
   return (
-    <div className="flex gap-4 h-full min-h-[500px]">
+    <div className="flex h-[calc(100vh-280px)] min-h-[500px]">
       {/* Chapter sidebar */}
-      <div className="w-56 shrink-0 flex flex-col border-r border-border pr-4">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-semibold text-foreground">Capítulos</span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => addChapter.mutate()}>
+      <aside className="w-52 shrink-0 flex flex-col border-r border-border bg-secondary/20">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Capítulos</span>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => addChapter.mutate()}>
             <Plus className="w-4 h-4" />
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 -mr-2 pr-2">
-          <div className="flex flex-col gap-1">
+        <ScrollArea className="flex-1">
+          <div className="flex flex-col py-1">
             {chapters.map((ch, idx) => (
               <div
                 key={ch.id}
-                className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm cursor-pointer transition-colors ${
+                className={`group flex items-center gap-1 mx-1 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
                   ch.id === activeId
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                    ? "bg-card text-foreground font-medium shadow-sm"
+                    : "text-muted-foreground hover:bg-card/50 hover:text-foreground"
                 }`}
                 onClick={() => selectChapter(ch.id)}
               >
@@ -193,7 +180,7 @@ export default function ManuscriptEditor({ bookId }: Props) {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     />
-                    <button onClick={(e) => { e.stopPropagation(); commitRename(); }} className="text-primary">
+                    <button onClick={(e) => { e.stopPropagation(); commitRename(); }} className="text-accent">
                       <Check className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); setEditingId(null); }} className="text-muted-foreground">
@@ -230,52 +217,62 @@ export default function ManuscriptEditor({ bookId }: Props) {
           </div>
         </ScrollArea>
 
-        <div className="pt-3 mt-2 border-t border-border text-xs text-muted-foreground">
+        <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground">
           {chapters.length} {chapters.length === 1 ? "capítulo" : "capítulos"}
         </div>
-      </div>
+      </aside>
 
-      {/* Editor area */}
-      <div className="flex-1 flex flex-col gap-3 min-w-0">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-              <Upload className="w-4 h-4 mr-1" /> Importar
+      {/* Writing area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-card">
+        {/* Minimal toolbar */}
+        <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-card">
+          <div className="flex items-center gap-3">
+            <h3 className="font-display text-sm font-semibold text-foreground truncate max-w-[300px]">
+              {activeChapter?.title ?? "Sin título"}
+            </h3>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 text-xs" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+              <Upload className="w-3.5 h-3.5 mr-1.5" /> Importar
             </Button>
             <input ref={fileInputRef} type="file" accept=".docx,.txt" className="hidden" onChange={onFileChange} />
-          </div>
-
-          <div className="flex items-center gap-3">
+            <div className="h-4 w-px bg-border" />
             {isSaving ? (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> Guardando…
               </span>
             ) : (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Guardado
+                <CheckCircle2 className="w-3 h-3 text-accent" /> Guardado
               </span>
             )}
-            <Button size="sm" onClick={saveNow}>
-              <Save className="w-4 h-4 mr-1" /> Guardar
+            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={saveNow}>
+              <Save className="w-3.5 h-3.5 mr-1.5" /> Guardar
             </Button>
           </div>
         </div>
 
-        {/* Text area */}
-        <Textarea
-          value={content}
-          onChange={(e) => updateContent(e.target.value)}
-          placeholder="Empieza a escribir aquí…"
-          className="flex-1 min-h-[400px] resize-none font-serif text-base leading-relaxed p-6 bg-card border-border focus-visible:ring-primary/30"
+        {/* Editor */}
+        <div
+          className="flex-1 overflow-y-auto"
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
-        />
+        >
+          <div className="max-w-2xl mx-auto px-8 py-10">
+            <textarea
+              value={content}
+              onChange={(e) => updateContent(e.target.value)}
+              placeholder="Empieza a escribir…"
+              className="w-full min-h-[60vh] resize-none border-0 bg-transparent font-body text-base leading-[1.9] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-0"
+              spellCheck
+            />
+          </div>
+        </div>
 
         {/* Status bar */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
-          <span>{wordCount.toLocaleString("es-ES")} palabras</span>
-          <span>{charCount.toLocaleString("es-ES")} caracteres</span>
+        <div className="flex items-center justify-between px-6 py-1.5 border-t border-border bg-secondary/30 text-xs text-muted-foreground">
+          <span>{wordCount.toLocaleString("es-ES")} palabras · {charCount.toLocaleString("es-ES")} caracteres</span>
+          <span className="text-muted-foreground/60">Autoguardado activo</span>
         </div>
       </div>
     </div>
