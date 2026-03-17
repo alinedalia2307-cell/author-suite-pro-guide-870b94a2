@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import ManuscriptEditor from "@/components/manuscript/ManuscriptEditor";
+import CorrectionPanel from "@/components/correction/CorrectionPanel";
 
 const phases = [
   { value: "manuscrito", label: "Manuscrito", icon: Upload, description: "Sube tu manuscrito en Word, PDF o texto plano para comenzar el proceso." },
