@@ -1,10 +1,11 @@
-import { useState, useMemo } from "react";
-import { CheckCircle2, XCircle, Loader2, Plus, Filter } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, XCircle, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { useChapters, type Chapter } from "@/hooks/useChapters";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 // ── Types ──
 
@@ -15,53 +16,26 @@ interface Correction {
   type: CorrectionType;
   original: string;
   suggestion: string;
-  context: string;
+  explanation: string;
   status: "pending" | "accepted" | "rejected";
 }
 
 const TYPE_META: Record<CorrectionType, { label: string; color: string }> = {
-  ortografia:  { label: "Ortografía",  color: "bg-destructive/10 text-destructive border-destructive/20" },
-  gramatica:   { label: "Gramática",   color: "bg-accent/15 text-accent-foreground border-accent/30" },
-  tipografia:  { label: "Tipografía",  color: "bg-primary/10 text-primary border-primary/20" },
-  claridad:    { label: "Claridad",    color: "bg-secondary text-secondary-foreground border-border" },
+  ortografia: { label: "Ortografía", color: "bg-destructive/10 text-destructive border-destructive/20" },
+  gramatica: { label: "Gramática", color: "bg-accent/15 text-accent-foreground border-accent/30" },
+  tipografia: { label: "Tipografía", color: "bg-primary/10 text-primary border-primary/20" },
+  claridad: { label: "Claridad", color: "bg-secondary text-secondary-foreground border-border" },
 };
 
-// ── Mock data generator ──
-
-function generateMockCorrections(chapter: Chapter): Correction[] {
-  const words = chapter.content.trim().split(/\s+/).filter(Boolean);
-  if (words.length < 3) return [];
-
-  const mocks: Correction[] = [];
-  const types: CorrectionType[] = ["ortografia", "gramatica", "tipografia", "claridad"];
-
-  // Generate 3-6 mock corrections based on content length
-  const count = Math.min(Math.max(3, Math.floor(words.length / 50)), 6);
-
-  const samples: Array<{ type: CorrectionType; original: string; suggestion: string; context: string }> = [
-    { type: "ortografia", original: "travez", suggestion: "través", context: "…a travez del camino…" },
-    { type: "ortografia", original: "aver", suggestion: "a ver", context: "…vamos aver qué pasa…" },
-    { type: "gramatica", original: "habían muchas personas", suggestion: "había muchas personas", context: "…en la plaza habían muchas personas reunidas…" },
-    { type: "gramatica", original: "le dijo a ellos", suggestion: "les dijo", context: "…entonces le dijo a ellos que…" },
-    { type: "tipografia", original: 'dijo "hola"', suggestion: "dijo «hola»", context: '…el protagonista dijo "hola" al entrar…' },
-    { type: "tipografia", original: "...", suggestion: "…", context: "…esperó un momento... y continuó…" },
-    { type: "claridad", original: "La cosa esa que estaba ahí", suggestion: "El objeto que se encontraba en la mesa", context: "…La cosa esa que estaba ahí le llamó la atención…" },
-    { type: "claridad", original: "Hizo la cosa", suggestion: "Realizó la tarea encomendada", context: "…Al llegar, hizo la cosa sin demora…" },
-  ];
-
-  for (let i = 0; i < count; i++) {
-    const sample = samples[i % samples.length];
-    mocks.push({
-      id: `${chapter.id}-corr-${i}`,
-      type: sample.type,
-      original: sample.original,
-      suggestion: sample.suggestion,
-      context: sample.context,
-      status: "pending",
-    });
-  }
-
-  return mocks;
+// Map AI response types to internal types
+function mapCorrectionType(aiType: string): CorrectionType {
+  const map: Record<string, CorrectionType> = {
+    "ortografía": "ortografia",
+    "gramática": "gramatica",
+    "estilo": "claridad",
+    "puntuación": "tipografia",
+  };
+  return map[aiType] || "claridad";
 }
 
 // ── Component ──
@@ -71,26 +45,15 @@ interface Props {
 }
 
 export default function CorrectionPanel({ bookId }: Props) {
-  const { chapters, activeId, content, isLoading, selectChapter } = useChapters(bookId);
+  const { chapters, activeId, content, isLoading, selectChapter, updateContent } = useChapters(bookId);
   const [corrections, setCorrections] = useState<Record<string, Correction[]>>({});
   const [filterType, setFilterType] = useState<CorrectionType | "all">("all");
+  const [analyzing, setAnalyzing] = useState(false);
+  const [summaries, setSummaries] = useState<Record<string, string>>({});
+  const { toast } = useToast();
 
   const activeChapter = chapters.find((c) => c.id === activeId);
-
-  // Generate mock corrections on first view of a chapter
-  const chapterCorrections = useMemo(() => {
-    if (!activeId || !activeChapter) return [];
-    if (corrections[activeId]) return corrections[activeId];
-
-    const mocks = generateMockCorrections(activeChapter);
-    // We can't setState in useMemo, so we use a lazy init pattern
-    return mocks;
-  }, [activeId, activeChapter, corrections]);
-
-  // Lazy populate corrections state
-  if (activeId && !corrections[activeId] && chapterCorrections.length > 0) {
-    setCorrections((prev) => ({ ...prev, [activeId]: chapterCorrections }));
-  }
+  const chapterCorrections = corrections[activeId ?? ""] ?? [];
 
   const filteredCorrections = filterType === "all"
     ? chapterCorrections
@@ -100,14 +63,75 @@ export default function CorrectionPanel({ bookId }: Props) {
   const acceptedCount = chapterCorrections.filter((c) => c.status === "accepted").length;
   const rejectedCount = chapterCorrections.filter((c) => c.status === "rejected").length;
 
+  // ── AI Analysis ──
+  const analyzeChapter = async () => {
+    if (!activeId || !content.trim()) {
+      toast({ title: "Sin texto", description: "Escribe algo en el capítulo antes de analizar.", variant: "destructive" });
+      return;
+    }
+
+    setAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("correct-manuscript", {
+        body: { text: content, lang: "es" },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      const aiCorrections: Correction[] = (data.corrections || []).map(
+        (c: any, i: number) => ({
+          id: `${activeId}-ai-${i}`,
+          type: mapCorrectionType(c.type),
+          original: c.original,
+          suggestion: c.suggestion,
+          explanation: c.explanation || "",
+          status: "pending" as const,
+        })
+      );
+
+      setCorrections((prev) => ({ ...prev, [activeId]: aiCorrections }));
+      setSummaries((prev) => ({ ...prev, [activeId]: data.summary || "" }));
+
+      if (aiCorrections.length === 0) {
+        toast({ title: "¡Sin errores!", description: "No se detectaron correcciones en este capítulo." });
+      } else {
+        toast({ title: `${aiCorrections.length} sugerencias encontradas` });
+      }
+    } catch (err: any) {
+      console.error("AI correction error:", err);
+      toast({
+        title: "Error de análisis",
+        description: err?.message || "No se pudo conectar con el servicio de IA.",
+        variant: "destructive",
+      });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // ── Accept: apply change to chapter content ──
   const handleAccept = (id: string) => {
     if (!activeId) return;
+    const corr = chapterCorrections.find((c) => c.id === id);
+    if (!corr) return;
+
+    // Replace the original text fragment in the chapter content
+    const currentContent = content;
+    if (currentContent.includes(corr.original)) {
+      const updated = currentContent.replace(corr.original, corr.suggestion);
+      updateContent(updated);
+    }
+
     setCorrections((prev) => ({
       ...prev,
       [activeId]: (prev[activeId] ?? []).map((c) =>
         c.id === id ? { ...c, status: "accepted" as const } : c
       ),
     }));
+    toast({ title: "Corrección aplicada" });
   };
 
   const handleReject = (id: string) => {
@@ -136,6 +160,8 @@ export default function CorrectionPanel({ bookId }: Props) {
       </div>
     );
   }
+
+  const summary = summaries[activeId ?? ""] ?? "";
 
   return (
     <div className="flex h-[calc(100vh-280px)] min-h-[500px]">
@@ -176,10 +202,23 @@ export default function CorrectionPanel({ bookId }: Props) {
       <div className="flex-1 flex min-w-0">
         {/* Chapter content preview */}
         <div className="flex-1 flex flex-col min-w-0 border-r border-border bg-card">
-          <div className="px-6 py-2 border-b border-border">
+          <div className="px-6 py-2 border-b border-border flex items-center justify-between gap-3">
             <h3 className="font-display text-sm font-semibold text-foreground truncate">
               {activeChapter?.title ?? "Sin título"}
             </h3>
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5 text-xs"
+              onClick={analyzeChapter}
+              disabled={analyzing || !content.trim()}
+            >
+              {analyzing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="w-3.5 h-3.5" />
+              )}
+              {analyzing ? "Analizando…" : "Analizar texto"}
+            </Button>
           </div>
           <ScrollArea className="flex-1">
             <div className="max-w-2xl mx-auto px-8 py-8">
@@ -196,37 +235,60 @@ export default function CorrectionPanel({ bookId }: Props) {
           <div className="px-4 py-3 border-b border-border space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Sugerencias</span>
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                <span>{pendingCount} pendientes</span>
-                <span className="text-accent">✓ {acceptedCount}</span>
-                <span className="text-destructive/60">✗ {rejectedCount}</span>
-              </div>
+              {chapterCorrections.length > 0 && (
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <span>{pendingCount} pendientes</span>
+                  <span className="text-accent">✓ {acceptedCount}</span>
+                  <span className="text-destructive/60">✗ {rejectedCount}</span>
+                </div>
+              )}
             </div>
             {/* Filter chips */}
-            <div className="flex flex-wrap gap-1">
-              {(["all", "ortografia", "gramatica", "tipografia", "claridad"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setFilterType(t)}
-                  className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                    filterType === t
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-card text-muted-foreground border-border hover:border-primary/30"
-                  }`}
-                >
-                  {t === "all" ? "Todas" : TYPE_META[t].label}
-                </button>
-              ))}
-            </div>
+            {chapterCorrections.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {(["all", "ortografia", "gramatica", "tipografia", "claridad"] as const).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setFilterType(t)}
+                    className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                      filterType === t
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-muted-foreground border-border hover:border-primary/30"
+                    }`}
+                  >
+                    {t === "all" ? "Todas" : TYPE_META[t].label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Summary */}
+          {summary && (
+            <div className="mx-3 mt-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
+              <p className="text-[11px] font-medium text-foreground mb-0.5">Resumen</p>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{summary}</p>
+            </div>
+          )}
 
           {/* Corrections list */}
           <ScrollArea className="flex-1">
             <div className="flex flex-col gap-2 p-3">
-              {filteredCorrections.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-8">
-                  No hay sugerencias{filterType !== "all" ? ` de ${TYPE_META[filterType as CorrectionType].label.toLowerCase()}` : ""}.
-                </p>
+              {chapterCorrections.length === 0 && !analyzing && (
+                <div className="flex flex-col items-center gap-3 py-10 text-center px-4">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Pulsa «Analizar texto» para recibir sugerencias de corrección con IA.
+                  </p>
+                </div>
+              )}
+              {analyzing && (
+                <div className="flex flex-col items-center gap-3 py-10">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground">Analizando capítulo…</p>
+                </div>
               )}
               {filteredCorrections.map((corr) => (
                 <div
@@ -253,11 +315,6 @@ export default function CorrectionPanel({ bookId }: Props) {
                     )}
                   </div>
 
-                  {/* Context */}
-                  <p className="text-[11px] text-muted-foreground leading-relaxed italic">
-                    {corr.context}
-                  </p>
-
                   {/* Original → Suggestion */}
                   <div className="space-y-1">
                     <div className="flex items-start gap-2">
@@ -269,6 +326,11 @@ export default function CorrectionPanel({ bookId }: Props) {
                       <span className="text-xs text-foreground font-medium">{corr.suggestion}</span>
                     </div>
                   </div>
+
+                  {/* Explanation */}
+                  {corr.explanation && (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed italic">{corr.explanation}</p>
+                  )}
 
                   {/* Actions */}
                   {corr.status === "pending" && (
