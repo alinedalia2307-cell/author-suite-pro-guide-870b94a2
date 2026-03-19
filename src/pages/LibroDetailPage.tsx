@@ -83,8 +83,15 @@ export default function LibroDetailPage() {
             </div>
           </TabsContent>
 
+          {/* Maquetación */}
+          <TabsContent value="maquetacion" className="mt-0">
+            <div className="rounded-lg border border-border overflow-hidden">
+              <LayoutPanel bookId={book.id} />
+            </div>
+          </TabsContent>
+
           {/* Other phases – placeholder */}
-          {phases.filter(p => p.value !== "manuscrito" && p.value !== "correccion").map((phase) => (
+          {phases.filter(p => p.value !== "manuscrito" && p.value !== "correccion" && p.value !== "maquetacion").map((phase) => (
             <TabsContent key={phase.value} value={phase.value}>
               <Card className="p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
