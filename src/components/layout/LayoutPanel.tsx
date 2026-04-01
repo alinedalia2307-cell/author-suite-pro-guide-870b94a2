@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import BookPagePreview from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,12 +44,7 @@ export default function LayoutPanel({ bookId }: Props) {
   const activeFont = FONTS.find((f) => f.value === font) ?? FONTS[0];
 
   // Build all chapter contents for the preview
-  const allContent = useMemo(() => {
-    if (!chapters.length) return "";
-    return chapters
-      .map((ch) => `## ${ch.title}\n\n${ch.content || "(Sin contenido)"}`)
-      .join("\n\n---\n\n");
-  }, [chapters]);
+  // allContent removed — no longer needed
 
   const previewText = content || "(Selecciona un capítulo para ver la vista previa)";
   const activeChapter = chapters.find((c) => c.id === activeId);
@@ -70,8 +66,7 @@ export default function LayoutPanel({ bookId }: Props) {
     );
   }
 
-  // Scale factor: fit the page into a preview area of ~600px height
-  const scale = Math.min(600 / activePage.h, 500 / activePage.w);
+  // Scale handled inside BookPagePreview
 
   return (
     <div className="flex h-[calc(100vh-260px)] min-h-[500px]">
@@ -101,42 +96,18 @@ export default function LayoutPanel({ bookId }: Props) {
       </div>
 
       {/* ── Page preview ── */}
-      <div className="flex-1 flex items-center justify-center bg-muted/20 overflow-auto p-6">
-        <div
-          className="bg-background shadow-lg border border-border overflow-hidden"
-          style={{
-            width: `${activePage.w * scale}px`,
-            height: `${activePage.h * scale}px`,
-            padding: `${marginV * scale}px ${marginH * scale}px`,
-          }}
-        >
-          <ScrollArea className="h-full w-full">
-            {activeChapter && (
-              <h2
-                className="font-display mb-4"
-                style={{
-                  fontFamily: activeFont.css,
-                  fontSize: `${(fontSize + 6) * scale * 0.26}px`,
-                  lineHeight: 1.3,
-                }}
-              >
-                {activeChapter.title}
-              </h2>
-            )}
-            <div
-              style={{
-                fontFamily: activeFont.css,
-                fontSize: `${fontSize * scale * 0.26}px`,
-                lineHeight: lineHeight,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                color: "hsl(var(--foreground))",
-              }}
-            >
-              {previewText}
-            </div>
-          </ScrollArea>
-        </div>
+      <div className="flex-1 bg-muted/20 overflow-hidden">
+        <BookPagePreview
+          title={activeChapter?.title}
+          text={previewText}
+          pageW={activePage.w}
+          pageH={activePage.h}
+          marginH={marginH}
+          marginV={marginV}
+          fontFamily={activeFont.css}
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+        />
       </div>
 
       {/* ── Settings panel ── */}
