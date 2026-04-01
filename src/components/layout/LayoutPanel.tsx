@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import BookPagePreview from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
