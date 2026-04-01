@@ -97,42 +97,18 @@ export default function LayoutPanel({ bookId }: Props) {
       </div>
 
       {/* ── Page preview ── */}
-      <div className="flex-1 flex items-center justify-center bg-muted/20 overflow-auto p-6">
-        <div
-          className="bg-background shadow-lg border border-border overflow-hidden"
-          style={{
-            width: `${activePage.w * scale}px`,
-            height: `${activePage.h * scale}px`,
-            padding: `${marginV * scale}px ${marginH * scale}px`,
-          }}
-        >
-          <ScrollArea className="h-full w-full">
-            {activeChapter && (
-              <h2
-                className="font-display mb-4"
-                style={{
-                  fontFamily: activeFont.css,
-                  fontSize: `${(fontSize + 6) * scale * 0.26}px`,
-                  lineHeight: 1.3,
-                }}
-              >
-                {activeChapter.title}
-              </h2>
-            )}
-            <div
-              style={{
-                fontFamily: activeFont.css,
-                fontSize: `${fontSize * scale * 0.26}px`,
-                lineHeight: lineHeight,
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                color: "hsl(var(--foreground))",
-              }}
-            >
-              {previewText}
-            </div>
-          </ScrollArea>
-        </div>
+      <div className="flex-1 bg-muted/20 overflow-hidden">
+        <BookPagePreview
+          title={activeChapter?.title}
+          text={previewText}
+          pageW={activePage.w}
+          pageH={activePage.h}
+          marginH={marginH}
+          marginV={marginV}
+          fontFamily={activeFont.css}
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+        />
       </div>
 
       {/* ── Settings panel ── */}
