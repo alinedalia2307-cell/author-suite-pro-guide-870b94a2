@@ -66,8 +66,7 @@ export default function LayoutPanel({ bookId }: Props) {
     );
   }
 
-  // Scale factor: fit the page into a preview area of ~600px height
-  const scale = Math.min(600 / activePage.h, 500 / activePage.w);
+  // Scale handled inside BookPagePreview
 
   return (
     <div className="flex h-[calc(100vh-260px)] min-h-[500px]">
