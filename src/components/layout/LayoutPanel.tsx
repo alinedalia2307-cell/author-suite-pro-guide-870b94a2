@@ -44,12 +44,7 @@ export default function LayoutPanel({ bookId }: Props) {
   const activeFont = FONTS.find((f) => f.value === font) ?? FONTS[0];
 
   // Build all chapter contents for the preview
-  const allContent = useMemo(() => {
-    if (!chapters.length) return "";
-    return chapters
-      .map((ch) => `## ${ch.title}\n\n${ch.content || "(Sin contenido)"}`)
-      .join("\n\n---\n\n");
-  }, [chapters]);
+  // allContent removed — no longer needed
 
   const previewText = content || "(Selecciona un capítulo para ver la vista previa)";
   const activeChapter = chapters.find((c) => c.id === activeId);
