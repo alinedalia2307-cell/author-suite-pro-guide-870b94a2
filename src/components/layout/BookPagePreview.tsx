@@ -88,28 +88,38 @@ export default function BookPagePreview({
       {/* Hidden measurement container */}
       <div ref={measRef} className="absolute opacity-0 pointer-events-none" />
 
-      <div className="flex flex-col items-center gap-8 py-8 px-4">
+      <div className="flex flex-col items-center gap-12 py-12 px-6">
         {pages.map((pageText, i) => (
-          <div key={i} className="relative">
-            {/* Page shadow layers for depth */}
+          <div key={i} className="relative" style={{ perspective: "1200px" }}>
+            {/* Stacked page edges for book depth */}
             <div
-              className="absolute inset-0 translate-x-1 translate-y-1 bg-muted/40 rounded-sm"
-              style={{ width: scaledW, height: scaledH }}
+              className="absolute rounded-sm bg-muted/30"
+              style={{
+                width: scaledW - 2,
+                height: scaledH - 2,
+                top: 6,
+                left: 6,
+              }}
             />
             <div
-              className="absolute inset-0 translate-x-0.5 translate-y-0.5 bg-muted/20 rounded-sm"
-              style={{ width: scaledW, height: scaledH }}
+              className="absolute rounded-sm bg-muted/15"
+              style={{
+                width: scaledW - 1,
+                height: scaledH - 1,
+                top: 3,
+                left: 3,
+              }}
             />
 
             {/* Actual page */}
             <div
-              className="relative bg-white border border-border/60 rounded-sm overflow-hidden"
+              className="relative bg-white rounded-sm overflow-hidden"
               style={{
                 width: scaledW,
                 height: scaledH,
                 padding: `${scaledMV}px ${scaledMH}px`,
                 boxShadow:
-                  "0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.04)",
+                  "0 2px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06), 0 16px 40px rgba(0,0,0,0.08), inset 0 0 0 0.5px rgba(0,0,0,0.08)",
               }}
             >
               {/* Chapter title on first page */}
@@ -123,6 +133,7 @@ export default function BookPagePreview({
                     color: "#1a1a1a",
                     fontWeight: 600,
                     letterSpacing: "-0.01em",
+                    textAlign: "center",
                   }}
                 >
                   {title}
@@ -135,12 +146,12 @@ export default function BookPagePreview({
                   fontFamily,
                   fontSize: `${scaledFont}px`,
                   lineHeight,
-                  color: "#2a2a2a",
+                  color: "#333",
                   textAlign: "justify",
                   hyphens: "auto",
                   wordBreak: "break-word",
-                  textIndent: `${scaledFont * 1.5}px`,
                   overflow: "hidden",
+                  letterSpacing: "0.01em",
                   height: i === 0 && title
                     ? `calc(100% - ${scaledTitleFont * 1.4 + 16}px)`
                     : "100%",
@@ -151,8 +162,8 @@ export default function BookPagePreview({
                     key={j}
                     style={{
                       margin: 0,
-                      marginBottom: `${scaledFont * 0.5}px`,
-                      textIndent: j > 0 ? `${scaledFont * 1.5}px` : "0",
+                      marginBottom: `${scaledFont * 0.6}px`,
+                      textIndent: j > 0 || (i > 0 && j === 0) ? `${scaledFont * 1.5}px` : "0",
                     }}
                   >
                     {para}
@@ -162,11 +173,13 @@ export default function BookPagePreview({
 
               {/* Page number */}
               <span
-                className="absolute bottom-0 left-0 right-0 text-center pb-2"
+                className="absolute bottom-0 left-0 right-0 text-center"
                 style={{
                   fontFamily,
-                  fontSize: `${scaledFont * 0.8}px`,
-                  color: "#999",
+                  fontSize: `${scaledFont * 0.75}px`,
+                  color: "#aaa",
+                  paddingBottom: `${scaledMV * 0.4}px`,
+                  letterSpacing: "0.05em",
                 }}
               >
                 {i + 1}
