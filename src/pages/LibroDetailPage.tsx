@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, SpellCheck, Palette, Globe, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, SpellCheck, Palette, BookImage, Globe, Loader2 } from "lucide-react";
 import { useBook, getStatusLabel } from "@/hooks/useBooks";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,11 +8,13 @@ import { Card } from "@/components/ui/card";
 import ManuscriptEditor from "@/components/manuscript/ManuscriptEditor";
 import CorrectionPanel from "@/components/correction/CorrectionPanel";
 import LayoutPanel from "@/components/layout/LayoutPanel";
+import CoverPanel from "@/components/cover/CoverPanel";
 
 const phases = [
   { value: "manuscrito", label: "Manuscrito", icon: Upload, description: "Sube tu manuscrito en Word, PDF o texto plano para comenzar el proceso." },
   { value: "correccion", label: "Corrección", icon: SpellCheck, description: "Revisa y corrige la gramática, ortografía y estilo con ayuda de IA." },
-  { value: "maquetacion", label: "Maquetación", icon: Palette, description: "Da formato profesional a tu libro y diseña una portada atractiva." },
+  { value: "maquetacion", label: "Maquetación", icon: Palette, description: "Da formato profesional a tu libro." },
+  { value: "portada", label: "Portada", icon: BookImage, description: "Diseña una portada atractiva y profesional para tu libro." },
   { value: "publicacion", label: "Publicación", icon: Globe, description: "Publica en Amazon, Apple Books, Google Play y más plataformas." },
 ];
 
@@ -90,8 +92,15 @@ export default function LibroDetailPage() {
             </div>
           </TabsContent>
 
+          {/* Portada */}
+          <TabsContent value="portada" className="mt-0">
+            <div className="rounded-lg border border-border overflow-hidden">
+              <CoverPanel bookTitle={book.title} bookSubtitle={book.subtitle} bookAuthor={book.author} />
+            </div>
+          </TabsContent>
+
           {/* Other phases – placeholder */}
-          {phases.filter(p => p.value !== "manuscrito" && p.value !== "correccion" && p.value !== "maquetacion").map((phase) => (
+          {phases.filter(p => !["manuscrito", "correccion", "maquetacion", "portada"].includes(p.value)).map((phase) => (
             <TabsContent key={phase.value} value={phase.value}>
               <Card className="p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
