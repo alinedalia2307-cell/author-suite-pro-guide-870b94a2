@@ -92,8 +92,15 @@ export default function LibroDetailPage() {
             </div>
           </TabsContent>
 
+          {/* Portada */}
+          <TabsContent value="portada" className="mt-0">
+            <div className="rounded-lg border border-border overflow-hidden">
+              <CoverPanel bookTitle={book.title} bookSubtitle={book.subtitle} bookAuthor={book.author} />
+            </div>
+          </TabsContent>
+
           {/* Other phases – placeholder */}
-          {phases.filter(p => p.value !== "manuscrito" && p.value !== "correccion" && p.value !== "maquetacion").map((phase) => (
+          {phases.filter(p => !["manuscrito", "correccion", "maquetacion", "portada"].includes(p.value)).map((phase) => (
             <TabsContent key={phase.value} value={phase.value}>
               <Card className="p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
                 <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
