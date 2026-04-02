@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Type, Paintbrush, AlignLeft, AlignCenter, AlignRight, ImageIcon, Upload } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import CoverPreview, { CoverStyle, TextAlign } from "./CoverPreview";
+import { useBookCover, BookCoverInput } from "@/hooks/useBookCover";
 
 interface Props {
+  bookId: string;
   bookTitle: string;
   bookSubtitle: string | null;
   bookAuthor: string;
@@ -35,7 +37,10 @@ const PRESET_COLORS = [
   { bg: "#0d1b2a", accent: "#778da9" },
 ];
 
-export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Props) {
+export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor }: Props) {
+  const { cover, isLoading, saveCover } = useBookCover(bookId);
+  const [initialized, setInitialized] = useState(false);
+
   const [title, setTitle] = useState(bookTitle);
   const [subtitle, setSubtitle] = useState(bookSubtitle || "");
   const [author, setAuthor] = useState(bookAuthor);
@@ -47,6 +52,45 @@ export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Prop
   const [bgImage, setBgImage] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Load saved cover data once
+  useEffect(() => {
+    if (initialized || isLoading) return;
+    if (cover) {
+      setTitle(cover.title);
+      setSubtitle(cover.subtitle);
+      setAuthor(cover.author);
+      setStyle(cover.style);
+      setTextAlign(cover.text_align);
+      setBgColor(cover.bg_color);
+      setAccentColor(cover.accent_color);
+      setUseGradient(cover.use_gradient);
+      setBgImage(cover.bg_image_url);
+    }
+    setInitialized(true);
+  }, [cover, isLoading, initialized]);
+
+  // Autosave on changes
+  const triggerSave = useCallback(() => {
+    if (!initialized) return;
+    const input: BookCoverInput = {
+      book_id: bookId,
+      title,
+      subtitle,
+      author,
+      text_align: textAlign,
+      style,
+      bg_color: bgColor,
+      accent_color: accentColor,
+      use_gradient: useGradient,
+      bg_image_url: bgImage,
+    };
+    saveCover(input);
+  }, [initialized, bookId, title, subtitle, author, textAlign, style, bgColor, accentColor, useGradient, bgImage, saveCover]);
+
+  useEffect(() => {
+    triggerSave();
+  }, [triggerSave]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -140,8 +184,6 @@ export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Prop
             {/* Colors */}
             <div className="space-y-3">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Colores</Label>
-
-              {/* Presets */}
               <div className="grid grid-cols-4 gap-2">
                 {PRESET_COLORS.map((preset, i) => (
                   <button
@@ -155,8 +197,6 @@ export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Prop
                   />
                 ))}
               </div>
-
-              {/* Custom colors */}
               <div className="flex gap-3">
                 <div className="flex-1 space-y-1">
                   <span className="text-xs text-muted-foreground">Fondo</span>
@@ -173,8 +213,6 @@ export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Prop
                   </div>
                 </div>
               </div>
-
-              {/* Gradient toggle */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Degradado</span>
                 <Switch checked={useGradient} onCheckedChange={setUseGradient} />
@@ -189,7 +227,6 @@ export default function CoverPanel({ bookTitle, bookSubtitle, bookAuthor }: Prop
                 <ImageIcon className="w-3.5 h-3.5" /> Imagen de fondo
               </Label>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-
               {bgImage ? (
                 <div className="space-y-2">
                   <div className="relative rounded-md overflow-hidden border border-border h-20">

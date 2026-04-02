@@ -95,7 +95,7 @@ export default function LibroDetailPage() {
           {/* Portada */}
           <TabsContent value="portada" className="mt-0">
             <div className="rounded-lg border border-border overflow-hidden">
-              <CoverPanel bookTitle={book.title} bookSubtitle={book.subtitle} bookAuthor={book.author} />
+              <CoverPanel bookId={book.id} bookTitle={book.title} bookSubtitle={book.subtitle} bookAuthor={book.author} />
             </div>
           </TabsContent>
 
