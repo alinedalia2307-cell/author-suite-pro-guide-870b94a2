@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      book_covers: {
+        Row: {
+          accent_color: string
+          author: string
+          bg_color: string
+          bg_image_url: string | null
+          book_id: string
+          created_at: string
+          id: string
+          style: string
+          subtitle: string
+          text_align: string
+          title: string
+          updated_at: string
+          use_gradient: boolean
+        }
+        Insert: {
+          accent_color?: string
+          author?: string
+          bg_color?: string
+          bg_image_url?: string | null
+          book_id: string
+          created_at?: string
+          id?: string
+          style?: string
+          subtitle?: string
+          text_align?: string
+          title?: string
+          updated_at?: string
+          use_gradient?: boolean
+        }
+        Update: {
+          accent_color?: string
+          author?: string
+          bg_color?: string
+          bg_image_url?: string | null
+          book_id?: string
+          created_at?: string
+          id?: string
+          style?: string
+          subtitle?: string
+          text_align?: string
+          title?: string
+          updated_at?: string
+          use_gradient?: boolean
+        }
+        Relationships: []
+      }
       books: {
         Row: {
           author: string
