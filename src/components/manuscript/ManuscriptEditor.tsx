@@ -7,8 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useChapters } from "@/hooks/useChapters";
+import { useChapters, SECTION_TYPES, SectionType } from "@/hooks/useChapters";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import mammoth from "mammoth";
 
 interface Props {
@@ -41,6 +47,9 @@ export default function ManuscriptEditor({ bookId }: Props) {
 
   const activeChapter = chapters.find((c) => c.id === activeId);
 
+  const getSectionIcon = (type: SectionType) =>
+    SECTION_TYPES.find((s) => s.value === type)?.icon ?? "📄";
+
   // ── File import ──
   const handleFile = useCallback(
     async (file: File) => {
@@ -62,7 +71,7 @@ export default function ManuscriptEditor({ bookId }: Props) {
         if (activeId) {
           updateContent(text);
         } else {
-          addChapter.mutate(undefined, {
+          addChapter.mutate("capitulo", {
             onSuccess: () => setTimeout(() => updateContent(text), 300),
           });
         }
@@ -122,8 +131,8 @@ export default function ManuscriptEditor({ bookId }: Props) {
         <input ref={fileInputRef} type="file" accept=".docx,.txt" className="hidden" onChange={onFileChange} />
         {[
           { icon: Upload, label: "Subir archivo", sub: ".docx o .txt", action: () => fileInputRef.current?.click() },
-          { icon: FileText, label: "Pegar texto", sub: "Crea un capítulo y pega", action: () => addChapter.mutate() },
-          { icon: PenLine, label: "Escribir desde cero", sub: "Capítulo en blanco", action: () => addChapter.mutate() },
+          { icon: FileText, label: "Pegar texto", sub: "Crea un capítulo y pega", action: () => addChapter.mutate("capitulo") },
+          { icon: PenLine, label: "Escribir desde cero", sub: "Capítulo en blanco", action: () => addChapter.mutate("capitulo") },
         ].map((item) => (
           <Card
             key={item.label}
@@ -146,13 +155,29 @@ export default function ManuscriptEditor({ bookId }: Props) {
   // ── Editor layout ──
   return (
     <div className="flex h-[calc(100vh-280px)] min-h-[500px]">
-      {/* Chapter sidebar */}
-      <aside className="w-52 shrink-0 flex flex-col border-r border-border bg-secondary/20">
+      {/* Section sidebar */}
+      <aside className="w-56 shrink-0 flex flex-col border-r border-border bg-secondary/20">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Capítulos</span>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => addChapter.mutate()}>
-            <Plus className="w-4 h-4" />
-          </Button>
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Secciones</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {SECTION_TYPES.map((st) => (
+                <DropdownMenuItem
+                  key={st.value}
+                  onClick={() => addChapter.mutate(st.value)}
+                  className="gap-2"
+                >
+                  <span>{st.icon}</span>
+                  <span>{st.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <ScrollArea className="flex-1">
@@ -160,13 +185,16 @@ export default function ManuscriptEditor({ bookId }: Props) {
             {chapters.map((ch, idx) => (
               <div
                 key={ch.id}
-                className={`group flex items-center gap-1 mx-1 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
+                className={`group flex items-center gap-1.5 mx-1 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors ${
                   ch.id === activeId
                     ? "bg-card text-foreground font-medium shadow-sm"
                     : "text-muted-foreground hover:bg-card/50 hover:text-foreground"
                 }`}
                 onClick={() => selectChapter(ch.id)}
               >
+                <span className="text-xs shrink-0" title={SECTION_TYPES.find(s => s.value === ch.section_type)?.label}>
+                  {getSectionIcon(ch.section_type)}
+                </span>
                 {editingId === ch.id ? (
                   <div className="flex items-center gap-1 flex-1 min-w-0">
                     <Input
@@ -218,7 +246,7 @@ export default function ManuscriptEditor({ bookId }: Props) {
         </ScrollArea>
 
         <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground">
-          {chapters.length} {chapters.length === 1 ? "capítulo" : "capítulos"}
+          {chapters.length} {chapters.length === 1 ? "sección" : "secciones"}
         </div>
       </aside>
 
@@ -226,10 +254,16 @@ export default function ManuscriptEditor({ bookId }: Props) {
       <div className="flex-1 flex flex-col min-w-0 bg-card">
         {/* Minimal toolbar */}
         <div className="flex items-center justify-between px-6 py-2 border-b border-border bg-card">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">{activeChapter ? getSectionIcon(activeChapter.section_type) : ""}</span>
             <h3 className="font-display text-sm font-semibold text-foreground truncate max-w-[300px]">
               {activeChapter?.title ?? "Sin título"}
             </h3>
+            {activeChapter && (
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 bg-secondary/50 px-1.5 py-0.5 rounded">
+                {SECTION_TYPES.find(s => s.value === activeChapter.section_type)?.label}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-8 text-xs" onClick={() => fileInputRef.current?.click()} disabled={importing}>

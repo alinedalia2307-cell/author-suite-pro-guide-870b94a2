@@ -102,6 +102,7 @@ export type Database = {
           created_at: string
           id: string
           position: number
+          section_type: Database["public"]["Enums"]["section_type"]
           title: string
           updated_at: string
           word_count: number
@@ -112,6 +113,7 @@ export type Database = {
           created_at?: string
           id?: string
           position?: number
+          section_type?: Database["public"]["Enums"]["section_type"]
           title?: string
           updated_at?: string
           word_count?: number
@@ -122,6 +124,7 @@ export type Database = {
           created_at?: string
           id?: string
           position?: number
+          section_type?: Database["public"]["Enums"]["section_type"]
           title?: string
           updated_at?: string
           word_count?: number
@@ -192,6 +195,13 @@ export type Database = {
         | "formatting"
         | "publishing"
         | "published"
+      section_type:
+        | "dedicatoria"
+        | "prologo"
+        | "capitulo"
+        | "epilogo"
+        | "agradecimientos"
+        | "texto_libre"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -326,6 +336,14 @@ export const Constants = {
         "formatting",
         "publishing",
         "published",
+      ],
+      section_type: [
+        "dedicatoria",
+        "prologo",
+        "capitulo",
+        "epilogo",
+        "agradecimientos",
+        "texto_libre",
       ],
     },
   },
