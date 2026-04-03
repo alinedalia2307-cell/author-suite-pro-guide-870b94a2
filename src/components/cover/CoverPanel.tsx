@@ -40,6 +40,7 @@ const PRESET_COLORS = [
 export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor }: Props) {
   const { cover, isLoading, saveCover } = useBookCover(bookId);
   const [initialized, setInitialized] = useState(false);
+  const skipSaveRef = useRef(true);
 
   const [title, setTitle] = useState(bookTitle);
   const [subtitle, setSubtitle] = useState(bookSubtitle || "");
@@ -68,11 +69,17 @@ export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor
       setBgImage(cover.bg_image_url);
     }
     setInitialized(true);
+    // Skip the save triggered by this batch of state updates
+    skipSaveRef.current = true;
   }, [cover, isLoading, initialized]);
 
   // Autosave on changes
   const triggerSave = useCallback(() => {
     if (!initialized) return;
+    if (skipSaveRef.current) {
+      skipSaveRef.current = false;
+      return;
+    }
     const input: BookCoverInput = {
       book_id: bookId,
       title,
