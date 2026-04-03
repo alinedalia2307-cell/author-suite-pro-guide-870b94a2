@@ -3,6 +3,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export const SECTION_TYPES = [
+  { value: "dedicatoria", label: "Dedicatoria", icon: "💐" },
+  { value: "prologo", label: "Prólogo", icon: "📖" },
+  { value: "capitulo", label: "Capítulo", icon: "📄" },
+  { value: "epilogo", label: "Epílogo", icon: "🔚" },
+  { value: "agradecimientos", label: "Agradecimientos", icon: "🙏" },
+  { value: "texto_libre", label: "Texto libre", icon: "✏️" },
+] as const;
+
+export type SectionType = (typeof SECTION_TYPES)[number]["value"];
+
 export interface Chapter {
   id: string;
   book_id: string;
@@ -10,6 +21,7 @@ export interface Chapter {
   content: string;
   position: number;
   word_count: number;
+  section_type: SectionType;
   created_at: string;
   updated_at: string;
 }
