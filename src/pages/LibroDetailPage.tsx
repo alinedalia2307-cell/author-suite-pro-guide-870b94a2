@@ -9,6 +9,7 @@ import ManuscriptEditor from "@/components/manuscript/ManuscriptEditor";
 import CorrectionPanel from "@/components/correction/CorrectionPanel";
 import LayoutPanel from "@/components/layout/LayoutPanel";
 import CoverPanel from "@/components/cover/CoverPanel";
+import PublicationPanel from "@/components/publication/PublicationPanel";
 
 const phases = [
   { value: "manuscrito", label: "Manuscrito", icon: Upload, description: "Sube tu manuscrito en Word, PDF o texto plano para comenzar el proceso." },
