@@ -7,6 +7,7 @@ export const SECTION_TYPES = [
   { value: "dedicatoria", label: "Dedicatoria", icon: "💐" },
   { value: "prologo", label: "Prólogo", icon: "📖" },
   { value: "capitulo", label: "Capítulo", icon: "📄" },
+  { value: "subcapitulo", label: "Subcapítulo", icon: "📑" },
   { value: "epilogo", label: "Epílogo", icon: "🔚" },
   { value: "agradecimientos", label: "Agradecimientos", icon: "🙏" },
   { value: "texto_libre", label: "Texto libre", icon: "✏️" },
