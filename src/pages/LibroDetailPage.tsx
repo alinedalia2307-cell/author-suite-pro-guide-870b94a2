@@ -100,21 +100,12 @@ export default function LibroDetailPage() {
             </div>
           </TabsContent>
 
-          {/* Other phases – placeholder */}
-          {phases.filter(p => !["manuscrito", "correccion", "maquetacion", "portada"].includes(p.value)).map((phase) => (
-            <TabsContent key={phase.value} value={phase.value}>
-              <Card className="p-8 flex flex-col items-center justify-center text-center min-h-[300px]">
-                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                  <phase.icon className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h2 className="font-display text-xl font-semibold text-foreground mb-2">{phase.label}</h2>
-                <p className="text-muted-foreground max-w-md mb-6">{phase.description}</p>
-                <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
-                  Comenzar {phase.label.toLowerCase()}
-                </Button>
-              </Card>
-            </TabsContent>
-          ))}
+          {/* Publicación */}
+          <TabsContent value="publicacion" className="mt-0">
+            <div className="rounded-lg border border-border overflow-hidden">
+              <PublicationPanel bookId={book.id} bookTitle={book.title} bookSubtitle={book.subtitle} bookAuthor={book.author} />
+            </div>
+          </TabsContent>
         </Tabs>
       </div>
     </main>
