@@ -199,6 +199,7 @@ export type Database = {
         | "dedicatoria"
         | "prologo"
         | "capitulo"
+        | "subcapitulo"
         | "epilogo"
         | "agradecimientos"
         | "texto_libre"
@@ -341,6 +342,7 @@ export const Constants = {
         "dedicatoria",
         "prologo",
         "capitulo",
+        "subcapitulo",
         "epilogo",
         "agradecimientos",
         "texto_libre",
