@@ -161,7 +161,7 @@ export default function BookPagePreview({
       elements: [{ type: "paragraph", text: "(Sin contenido)", indent: false }],
       pageNumber: 1,
     }]);
-  }, [chapters, activeChapterId, contentH, scaledW, scaledMH, scaledMInner, scaledFont, scaledTitleFont, scaledSubtitleFont, lineHeight, subchapterMode]);
+  }, [chapters, contentH, scaledW, scaledMH, scaledMInner, scaledFont, scaledTitleFont, scaledSubtitleFont, lineHeight, subchapterMode]);
 
   return (
     <ScrollArea className="h-full w-full">
