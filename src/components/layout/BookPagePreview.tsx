@@ -18,6 +18,16 @@ interface Props {
   subchapterMode: SubchapterMode;
 }
 
+const SECTION_ORDER: Record<string, number> = {
+  dedicatoria: 0,
+  prologo: 1,
+  capitulo: 2,
+  subcapitulo: 2.5,
+  epilogo: 3,
+  agradecimientos: 4,
+  texto_libre: 5,
+};
+
 interface PageContent {
   elements: PageElement[];
   pageNumber: number;
@@ -65,18 +75,13 @@ export default function BookPagePreview({
       return;
     }
 
-    // Filter to active chapter if set, otherwise show all
-    const chaptersToShow = activeChapterId
-      ? chapters.filter((c) => c.id === activeChapterId)
-      : chapters;
-
-    if (!chaptersToShow.length) {
-      setPages([{
-        elements: [{ type: "paragraph", text: "(Selecciona un capítulo)", indent: false }],
-        pageNumber: 1,
-      }]);
-      return;
-    }
+    // Sort all sections in editorial order, then by position
+    const chaptersToShow = [...chapters].sort((a, b) => {
+      const oa = SECTION_ORDER[a.section_type] ?? 99;
+      const ob = SECTION_ORDER[b.section_type] ?? 99;
+      if (oa !== ob) return oa - ob;
+      return a.position - b.position;
+    });
 
     const result: PageContent[] = [];
     let currentElements: PageElement[] = [];
@@ -156,7 +161,7 @@ export default function BookPagePreview({
       elements: [{ type: "paragraph", text: "(Sin contenido)", indent: false }],
       pageNumber: 1,
     }]);
-  }, [chapters, activeChapterId, contentH, scaledW, scaledMH, scaledMInner, scaledFont, scaledTitleFont, scaledSubtitleFont, lineHeight, subchapterMode]);
+  }, [chapters, contentH, scaledW, scaledMH, scaledMInner, scaledFont, scaledTitleFont, scaledSubtitleFont, lineHeight, subchapterMode]);
 
   return (
     <ScrollArea className="h-full w-full">
