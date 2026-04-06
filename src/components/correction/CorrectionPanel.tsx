@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { CheckCircle2, XCircle, Loader2, Sparkles, PanelRightOpen, PanelRightClose, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // ── Types ──
 
@@ -26,11 +32,31 @@ interface Correction {
   status: "pending" | "accepted" | "rejected";
 }
 
-const TYPE_META: Record<CorrectionType, { label: string; color: string }> = {
-  ortografia: { label: "Ortografía", color: "bg-destructive/10 text-destructive border-destructive/20" },
-  gramatica: { label: "Gramática", color: "bg-accent/15 text-accent-foreground border-accent/30" },
-  tipografia: { label: "Tipografía", color: "bg-primary/10 text-primary border-primary/20" },
-  claridad: { label: "Claridad", color: "bg-secondary text-secondary-foreground border-border" },
+const TYPE_META: Record<CorrectionType, { label: string; color: string; highlightBg: string; highlightBorder: string }> = {
+  ortografia: {
+    label: "Ortografía",
+    color: "bg-destructive/10 text-destructive border-destructive/20",
+    highlightBg: "bg-red-500/15",
+    highlightBorder: "border-b-2 border-red-400",
+  },
+  gramatica: {
+    label: "Gramática",
+    color: "bg-accent/15 text-accent-foreground border-accent/30",
+    highlightBg: "bg-amber-500/15",
+    highlightBorder: "border-b-2 border-amber-400",
+  },
+  tipografia: {
+    label: "Tipografía",
+    color: "bg-primary/10 text-primary border-primary/20",
+    highlightBg: "bg-purple-500/15",
+    highlightBorder: "border-b-2 border-purple-400",
+  },
+  claridad: {
+    label: "Claridad",
+    color: "bg-secondary text-secondary-foreground border-border",
+    highlightBg: "bg-blue-500/10",
+    highlightBorder: "border-b-2 border-blue-400",
+  },
 };
 
 function mapCorrectionType(aiType: string): CorrectionType {
@@ -43,7 +69,117 @@ function mapCorrectionType(aiType: string): CorrectionType {
   return map[aiType] || "claridad";
 }
 
-// ── Component ──
+// ── Highlighted Text Renderer ──
+
+interface HighlightedTextProps {
+  text: string;
+  corrections: Correction[];
+  focusedId: string | null;
+  onClickHighlight: (id: string) => void;
+  onApply: (id: string) => void;
+}
+
+function HighlightedText({ text, corrections, focusedId, onClickHighlight, onApply }: HighlightedTextProps) {
+  const pendingCorrections = corrections.filter((c) => c.status === "pending");
+
+  // Build segments: find all occurrences and split text
+  const segments = useMemo(() => {
+    if (pendingCorrections.length === 0) return [{ text, correction: null }];
+
+    // Find positions of each correction in the text
+    type Segment = { text: string; correction: Correction | null };
+    const matches: { start: number; end: number; correction: Correction }[] = [];
+
+    for (const corr of pendingCorrections) {
+      const idx = text.indexOf(corr.original);
+      if (idx !== -1) {
+        matches.push({ start: idx, end: idx + corr.original.length, correction: corr });
+      }
+    }
+
+    // Sort by position, remove overlaps
+    matches.sort((a, b) => a.start - b.start);
+    const filtered: typeof matches = [];
+    let lastEnd = 0;
+    for (const m of matches) {
+      if (m.start >= lastEnd) {
+        filtered.push(m);
+        lastEnd = m.end;
+      }
+    }
+
+    if (filtered.length === 0) return [{ text, correction: null }];
+
+    const result: Segment[] = [];
+    let pos = 0;
+    for (const m of filtered) {
+      if (m.start > pos) {
+        result.push({ text: text.slice(pos, m.start), correction: null });
+      }
+      result.push({ text: text.slice(m.start, m.end), correction: m.correction });
+      pos = m.end;
+    }
+    if (pos < text.length) {
+      result.push({ text: text.slice(pos), correction: null });
+    }
+    return result;
+  }, [text, pendingCorrections]);
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <p className="font-body text-[15px] leading-[2] text-foreground whitespace-pre-wrap tracking-[0.01em]">
+        {segments.map((seg, i) => {
+          if (!seg.correction) {
+            return <span key={i}>{seg.text}</span>;
+          }
+          const meta = TYPE_META[seg.correction.type];
+          const isFocused = seg.correction.id === focusedId;
+          return (
+            <Tooltip key={i}>
+              <TooltipTrigger asChild>
+                <span
+                  id={`hl-${seg.correction.id}`}
+                  className={`cursor-pointer rounded-sm px-0.5 -mx-0.5 transition-all ${meta.highlightBg} ${meta.highlightBorder} ${
+                    isFocused ? "ring-2 ring-primary/40 shadow-sm" : ""
+                  }`}
+                  onClick={() => onClickHighlight(seg.correction!.id)}
+                >
+                  {seg.text}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className={`text-[10px] ${meta.color}`}>
+                    {meta.label}
+                  </Badge>
+                </div>
+                <div className="text-xs space-y-0.5">
+                  <div className="line-through text-muted-foreground">{seg.correction.original}</div>
+                  <div className="font-medium text-foreground">{seg.correction.suggestion}</div>
+                </div>
+                {seg.correction.explanation && (
+                  <p className="text-[11px] text-muted-foreground italic">{seg.correction.explanation}</p>
+                )}
+                <Button
+                  size="sm"
+                  className="w-full h-7 text-xs mt-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApply(seg.correction!.id);
+                  }}
+                >
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Aplicar corrección
+                </Button>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </p>
+    </TooltipProvider>
+  );
+}
+
+// ── Main Component ──
 
 interface Props {
   bookId: string;
@@ -56,6 +192,7 @@ export default function CorrectionPanel({ bookId }: Props) {
   const [analyzing, setAnalyzing] = useState(false);
   const [summaries, setSummaries] = useState<Record<string, string>>({});
   const [panelOpen, setPanelOpen] = useState(true);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const activeChapter = chapters.find((c) => c.id === activeId);
@@ -77,6 +214,7 @@ export default function CorrectionPanel({ bookId }: Props) {
     }
 
     setAnalyzing(true);
+    setFocusedId(null);
     try {
       const { data, error } = await supabase.functions.invoke("correct-manuscript", {
         body: { text: content, lang: "es" },
@@ -136,6 +274,7 @@ export default function CorrectionPanel({ bookId }: Props) {
         c.id === id ? { ...c, status: "accepted" as const } : c
       ),
     }));
+    setFocusedId(null);
     toast({ title: "Corrección aplicada" });
   };
 
@@ -147,7 +286,25 @@ export default function CorrectionPanel({ bookId }: Props) {
         c.id === id ? { ...c, status: "rejected" as const } : c
       ),
     }));
+    if (focusedId === id) setFocusedId(null);
   };
+
+  const handleClickHighlight = useCallback((id: string) => {
+    setFocusedId(id);
+    setPanelOpen(true);
+    // Scroll suggestion into view
+    setTimeout(() => {
+      document.getElementById(`corr-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }, []);
+
+  const handleClickSuggestion = useCallback((id: string) => {
+    setFocusedId(id);
+    // Scroll highlight into view
+    setTimeout(() => {
+      document.getElementById(`hl-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  }, []);
 
   if (isLoading) {
     return (
@@ -173,7 +330,6 @@ export default function CorrectionPanel({ bookId }: Props) {
       {/* Top toolbar */}
       <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border bg-card">
         <div className="flex items-center gap-3">
-          {/* Chapter selector dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2 text-sm font-medium max-w-[280px]">
@@ -203,7 +359,6 @@ export default function CorrectionPanel({ bookId }: Props) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Stats */}
           {chapterCorrections.length > 0 && (
             <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
               <span>{pendingCount} pendientes</span>
@@ -220,11 +375,7 @@ export default function CorrectionPanel({ bookId }: Props) {
             onClick={analyzeChapter}
             disabled={analyzing || !content.trim()}
           >
-            {analyzing ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
-            )}
+            {analyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
             {analyzing ? "Analizando…" : "Analizar texto"}
           </Button>
           <Button
@@ -241,13 +392,21 @@ export default function CorrectionPanel({ bookId }: Props) {
 
       {/* Main area */}
       <div className="flex-1 flex min-h-0">
-        {/* Text content — takes full width when panel closed */}
+        {/* Text content with inline highlights */}
         <div className="flex-1 min-w-0 bg-card">
           <ScrollArea className="h-full">
             <div className="max-w-3xl mx-auto px-10 py-10">
-              <p className="font-body text-[15px] leading-[2] text-foreground whitespace-pre-wrap tracking-[0.01em]">
-                {content || <span className="text-muted-foreground/40 italic">Capítulo vacío</span>}
-              </p>
+              {content ? (
+                <HighlightedText
+                  text={content}
+                  corrections={chapterCorrections}
+                  focusedId={focusedId}
+                  onClickHighlight={handleClickHighlight}
+                  onApply={handleAccept}
+                />
+              ) : (
+                <p className="font-body text-[15px] leading-[2] text-muted-foreground/40 italic">Capítulo vacío</p>
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -303,67 +462,75 @@ export default function CorrectionPanel({ bookId }: Props) {
                     <p className="text-xs text-muted-foreground">Analizando capítulo…</p>
                   </div>
                 )}
-                {filteredCorrections.map((corr) => (
-                  <div
-                    key={corr.id}
-                    className={`rounded-lg border p-3 space-y-2 transition-opacity ${
-                      corr.status !== "pending" ? "opacity-50" : ""
-                    } ${
-                      corr.status === "accepted"
-                        ? "border-accent/30 bg-accent/5"
-                        : corr.status === "rejected"
-                          ? "border-border bg-muted/30"
-                          : "border-border bg-card"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <Badge variant="outline" className={`text-[10px] ${TYPE_META[corr.type].color}`}>
-                        {TYPE_META[corr.type].label}
-                      </Badge>
-                      {corr.status !== "pending" && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {corr.status === "accepted" ? "Aceptada" : "Rechazada"}
-                        </span>
+                {filteredCorrections.map((corr) => {
+                  const meta = TYPE_META[corr.type];
+                  const isFocused = corr.id === focusedId;
+                  return (
+                    <div
+                      key={corr.id}
+                      id={`corr-${corr.id}`}
+                      onClick={() => corr.status === "pending" && handleClickSuggestion(corr.id)}
+                      className={`rounded-lg border p-3 space-y-2 transition-all cursor-pointer ${
+                        corr.status !== "pending" ? "opacity-50 cursor-default" : ""
+                      } ${
+                        isFocused && corr.status === "pending"
+                          ? "border-primary/50 bg-primary/5 ring-1 ring-primary/20 shadow-sm"
+                          : corr.status === "accepted"
+                            ? "border-accent/30 bg-accent/5"
+                            : corr.status === "rejected"
+                              ? "border-border bg-muted/30"
+                              : "border-border bg-card hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className={`text-[10px] ${meta.color}`}>
+                          {meta.label}
+                        </Badge>
+                        {corr.status !== "pending" && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {corr.status === "accepted" ? "Aceptada" : "Rechazada"}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-destructive font-medium mt-0.5 shrink-0">Original:</span>
+                          <span className="text-xs text-foreground line-through decoration-destructive/40">{corr.original}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-[10px] text-accent font-medium mt-0.5 shrink-0">Sugerido:</span>
+                          <span className="text-xs text-foreground font-medium">{corr.suggestion}</span>
+                        </div>
+                      </div>
+
+                      {corr.explanation && (
+                        <p className="text-[11px] text-muted-foreground leading-relaxed italic">{corr.explanation}</p>
+                      )}
+
+                      {corr.status === "pending" && (
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs flex-1 text-accent hover:text-accent hover:bg-accent/10"
+                            onClick={(e) => { e.stopPropagation(); handleAccept(corr.id); }}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aceptar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => { e.stopPropagation(); handleReject(corr.id); }}
+                          >
+                            <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
+                          </Button>
+                        </div>
                       )}
                     </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-start gap-2">
-                        <span className="text-[10px] text-destructive font-medium mt-0.5 shrink-0">Original:</span>
-                        <span className="text-xs text-foreground line-through decoration-destructive/40">{corr.original}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[10px] text-accent font-medium mt-0.5 shrink-0">Sugerido:</span>
-                        <span className="text-xs text-foreground font-medium">{corr.suggestion}</span>
-                      </div>
-                    </div>
-
-                    {corr.explanation && (
-                      <p className="text-[11px] text-muted-foreground leading-relaxed italic">{corr.explanation}</p>
-                    )}
-
-                    {corr.status === "pending" && (
-                      <div className="flex items-center gap-2 pt-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs flex-1 text-accent hover:text-accent hover:bg-accent/10"
-                          onClick={() => handleAccept(corr.id)}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Aceptar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleReject(corr.id)}
-                        >
-                          <XCircle className="w-3.5 h-3.5 mr-1" /> Rechazar
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </aside>
