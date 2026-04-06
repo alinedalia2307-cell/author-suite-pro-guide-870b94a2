@@ -75,18 +75,13 @@ export default function BookPagePreview({
       return;
     }
 
-    // Filter to active chapter if set, otherwise show all
-    const chaptersToShow = activeChapterId
-      ? chapters.filter((c) => c.id === activeChapterId)
-      : chapters;
-
-    if (!chaptersToShow.length) {
-      setPages([{
-        elements: [{ type: "paragraph", text: "(Selecciona un capítulo)", indent: false }],
-        pageNumber: 1,
-      }]);
-      return;
-    }
+    // Sort all sections in editorial order, then by position
+    const chaptersToShow = [...chapters].sort((a, b) => {
+      const oa = SECTION_ORDER[a.section_type] ?? 99;
+      const ob = SECTION_ORDER[b.section_type] ?? 99;
+      if (oa !== ob) return oa - ob;
+      return a.position - b.position;
+    });
 
     const result: PageContent[] = [];
     let currentElements: PageElement[] = [];
