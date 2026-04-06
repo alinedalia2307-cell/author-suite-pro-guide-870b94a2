@@ -31,7 +31,7 @@ const FONTS = [
 ];
 
 export default function LayoutPanel({ bookId }: Props) {
-  const { chapters, activeId, isLoading, selectChapter } = useChapters(bookId);
+  const { chapters, isLoading } = useChapters(bookId);
 
   const [pageSize, setPageSize] = useState("a5");
   const [font, setFont] = useState("serif");
