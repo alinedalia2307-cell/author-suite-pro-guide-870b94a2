@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall, ListTree } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import BookPagePreview, { SubchapterMode } from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useChapters, Chapter } from "@/hooks/useChapters";
-import { cn } from "@/lib/utils";
+import { useChapters } from "@/hooks/useChapters";
 
 interface Props {
   bookId: string;
