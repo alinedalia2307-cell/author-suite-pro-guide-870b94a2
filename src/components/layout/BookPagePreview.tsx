@@ -18,6 +18,16 @@ interface Props {
   subchapterMode: SubchapterMode;
 }
 
+const SECTION_ORDER: Record<string, number> = {
+  dedicatoria: 0,
+  prologo: 1,
+  capitulo: 2,
+  subcapitulo: 2.5,
+  epilogo: 3,
+  agradecimientos: 4,
+  texto_libre: 5,
+};
+
 interface PageContent {
   elements: PageElement[];
   pageNumber: number;
