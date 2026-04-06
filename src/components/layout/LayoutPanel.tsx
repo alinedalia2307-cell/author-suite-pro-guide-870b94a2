@@ -64,37 +64,10 @@ export default function LayoutPanel({ bookId }: Props) {
 
   return (
     <div className="flex h-[calc(100vh-260px)] min-h-[500px]">
-      {/* Sidebar: chapters */}
-      <div className="w-56 shrink-0 border-r border-border bg-muted/30">
-        <div className="px-4 py-3 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground">Capítulos</h3>
-        </div>
-        <ScrollArea className="h-[calc(100%-48px)]">
-          <div className="p-2 space-y-0.5">
-            {chapters.map((ch) => (
-              <button
-                key={ch.id}
-                onClick={() => selectChapter(ch.id)}
-                className={cn(
-                  "w-full text-left px-3 py-2 rounded-md text-sm transition-colors",
-                  ch.id === activeId
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  ch.section_type === "subcapitulo" && "pl-7 text-xs"
-                )}
-              >
-                {ch.title}
-              </button>
-            ))}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Page preview */}
+      {/* Page preview – full book continuous view */}
       <div className="flex-1 bg-muted/20 overflow-hidden">
         <BookPagePreview
           chapters={chapters}
-          activeChapterId={activeId}
           pageW={activePage.w}
           pageH={activePage.h}
           marginH={marginH}
