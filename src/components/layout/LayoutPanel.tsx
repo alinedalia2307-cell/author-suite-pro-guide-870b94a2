@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall,
   ListTree, Settings2, Download, BookOpenCheck, FileText,
-  PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut, Maximize,
+  PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut,
   Eye,
 } from "lucide-react";
 import BookPagePreview, { SubchapterMode, ViewMode, buildPages, SECTION_ORDER } from "./BookPagePreview";
