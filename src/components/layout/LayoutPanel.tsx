@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall,
   ListTree, Settings2, Download, BookOpenCheck, FileText,
-  PanelRightClose, PanelRightOpen, ChevronDown,
+  PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut, Maximize,
+  Eye,
 } from "lucide-react";
 import BookPagePreview, { SubchapterMode, ViewMode, buildPages, SECTION_ORDER } from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
@@ -39,12 +40,17 @@ const FONTS = [
   { value: "sans", label: "Source Sans", css: "'Source Sans 3', sans-serif" },
 ];
 
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 250;
+const ZOOM_STEP = 10;
+const ZOOM_DEFAULT = 130;
+
 export default function LayoutPanel({ bookId }: Props) {
   const { chapters, isLoading } = useChapters(bookId);
   const { cover } = useBookCover(bookId);
   const { toast } = useToast();
+  const viewerRef = useRef<HTMLDivElement>(null);
 
-  // Settings state
   const [pageSize, setPageSize] = useState("a5");
   const [font, setFont] = useState("serif");
   const [fontSize, setFontSize] = useState(12);
@@ -57,15 +63,44 @@ export default function LayoutPanel({ bookId }: Props) {
   const [insertBlankPages, setInsertBlankPages] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+  const [readingMode, setReadingMode] = useState(false);
 
   const activePage = PAGE_SIZES.find((p) => p.value === pageSize) ?? PAGE_SIZES[1];
   const activeFont = FONTS.find((f) => f.value === font) ?? FONTS[0];
 
-  // Scale to fit nicely in the viewport
   const scale = useMemo(() => {
-    if (viewMode === "double") return Math.min(380 / activePage.w, 1);
-    return Math.min(560 / activePage.w, 1);
-  }, [viewMode, activePage.w]);
+    return (zoom / 100) * (activePage.w > 200 ? 0.85 : 1);
+  }, [zoom, activePage.w]);
+
+  // Ctrl + wheel zoom
+  useEffect(() => {
+    const el = viewerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((prev) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev + delta));
+      });
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
+  const toggleReadingMode = useCallback(() => {
+    setReadingMode((prev) => {
+      if (!prev) {
+        setViewMode("single");
+        setSettingsOpen(false);
+        setZoom(180);
+      } else {
+        setZoom(ZOOM_DEFAULT);
+      }
+      return !prev;
+    });
+  }, []);
 
   const totalPages = useMemo(() => {
     if (!chapters.length) return 0;
