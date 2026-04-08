@@ -288,27 +288,75 @@ export default function LayoutPanel({ bookId }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex items-center border border-border rounded-md overflow-hidden">
-            <button
-              onClick={() => setViewMode("single")}
-              className={cn(
-                "px-2.5 py-1.5 text-xs transition-colors",
-                viewMode === "single" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
-              )}
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+              disabled={zoom <= ZOOM_MIN}
             >
-              <FileText className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("double")}
-              className={cn(
-                "px-2.5 py-1.5 text-xs transition-colors",
-                viewMode === "double" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
-              )}
+              <ZoomOut className="w-3.5 h-3.5" />
+            </Button>
+            <div className="w-24">
+              <Slider
+                value={[zoom]}
+                onValueChange={([v]) => setZoom(v)}
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={ZOOM_STEP}
+                className="w-full"
+              />
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+              disabled={zoom >= ZOOM_MAX}
             >
-              <BookOpen className="w-3.5 h-3.5" />
-            </button>
+              <ZoomIn className="w-3.5 h-3.5" />
+            </Button>
+            <span className="text-[11px] text-muted-foreground w-9 text-center tabular-nums">{zoom}%</span>
           </div>
+
+          <Separator orientation="vertical" className="h-5" />
+
+          {/* View mode toggle */}
+          {!readingMode && (
+            <div className="flex items-center border border-border rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode("single")}
+                className={cn(
+                  "px-2.5 py-1.5 text-xs transition-colors",
+                  viewMode === "single" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <FileText className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("double")}
+                className={cn(
+                  "px-2.5 py-1.5 text-xs transition-colors",
+                  viewMode === "double" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Reading mode */}
+          <Button
+            size="sm"
+            variant={readingMode ? "default" : "ghost"}
+            onClick={toggleReadingMode}
+            className="gap-1.5 text-xs"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            {readingMode ? "Salir lectura" : "Modo lectura"}
+          </Button>
 
           <Separator orientation="vertical" className="h-5" />
 
@@ -318,19 +366,21 @@ export default function LayoutPanel({ bookId }: Props) {
             {isExporting ? "Generando…" : "Exportar PDF"}
           </Button>
 
-          <Separator orientation="vertical" className="h-5" />
-
-          {/* Settings toggle */}
-          <Button
-            size="sm"
-            variant={settingsOpen ? "default" : "ghost"}
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className="gap-1.5 text-xs"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            Ajustes
-            {settingsOpen ? <PanelRightClose className="w-3 h-3" /> : <PanelRightOpen className="w-3 h-3" />}
-          </Button>
+          {!readingMode && (
+            <>
+              <Separator orientation="vertical" className="h-5" />
+              <Button
+                size="sm"
+                variant={settingsOpen ? "default" : "ghost"}
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className="gap-1.5 text-xs"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Ajustes
+                {settingsOpen ? <PanelRightClose className="w-3 h-3" /> : <PanelRightOpen className="w-3 h-3" />}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -338,10 +388,15 @@ export default function LayoutPanel({ bookId }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Book viewer */}
         <ScrollArea className="flex-1">
-          <div className={cn(
-            "min-h-full",
-            "bg-gradient-to-b from-muted/40 to-muted/20",
-          )}>
+          <div
+            ref={viewerRef}
+            className={cn(
+              "min-h-full",
+              readingMode
+                ? "bg-[hsl(var(--muted)/0.15)]"
+                : "bg-gradient-to-b from-muted/40 to-muted/20",
+            )}
+          >
             <BookPagePreview
               chapters={chapters}
               pageW={activePage.w}
@@ -353,7 +408,7 @@ export default function LayoutPanel({ bookId }: Props) {
               fontSize={fontSize}
               lineHeight={lineHeight}
               subchapterMode={subchapterMode}
-              viewMode={viewMode}
+              viewMode={readingMode ? "single" : viewMode}
               insertBlankPages={insertBlankPages}
               scale={scale}
             />
