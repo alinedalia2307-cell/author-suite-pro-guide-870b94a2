@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   BookOpen, Loader2, Type, Columns, RulerIcon, ALargeSmall,
   ListTree, Settings2, Download, BookOpenCheck, FileText,
-  PanelRightClose, PanelRightOpen, ChevronDown,
+  PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut,
+  Eye,
 } from "lucide-react";
 import BookPagePreview, { SubchapterMode, ViewMode, buildPages, SECTION_ORDER } from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
@@ -39,12 +40,17 @@ const FONTS = [
   { value: "sans", label: "Source Sans", css: "'Source Sans 3', sans-serif" },
 ];
 
+const ZOOM_MIN = 50;
+const ZOOM_MAX = 250;
+const ZOOM_STEP = 10;
+const ZOOM_DEFAULT = 130;
+
 export default function LayoutPanel({ bookId }: Props) {
   const { chapters, isLoading } = useChapters(bookId);
   const { cover } = useBookCover(bookId);
   const { toast } = useToast();
+  const viewerRef = useRef<HTMLDivElement>(null);
 
-  // Settings state
   const [pageSize, setPageSize] = useState("a5");
   const [font, setFont] = useState("serif");
   const [fontSize, setFontSize] = useState(12);
@@ -57,15 +63,44 @@ export default function LayoutPanel({ bookId }: Props) {
   const [insertBlankPages, setInsertBlankPages] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+  const [readingMode, setReadingMode] = useState(false);
 
   const activePage = PAGE_SIZES.find((p) => p.value === pageSize) ?? PAGE_SIZES[1];
   const activeFont = FONTS.find((f) => f.value === font) ?? FONTS[0];
 
-  // Scale to fit nicely in the viewport
   const scale = useMemo(() => {
-    if (viewMode === "double") return Math.min(380 / activePage.w, 1);
-    return Math.min(560 / activePage.w, 1);
-  }, [viewMode, activePage.w]);
+    return (zoom / 100) * (activePage.w > 200 ? 0.85 : 1);
+  }, [zoom, activePage.w]);
+
+  // Ctrl + wheel zoom
+  useEffect(() => {
+    const el = viewerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setZoom((prev) => {
+        const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+        return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, prev + delta));
+      });
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
+  const toggleReadingMode = useCallback(() => {
+    setReadingMode((prev) => {
+      if (!prev) {
+        setViewMode("single");
+        setSettingsOpen(false);
+        setZoom(180);
+      } else {
+        setZoom(ZOOM_DEFAULT);
+      }
+      return !prev;
+    });
+  }, []);
 
   const totalPages = useMemo(() => {
     if (!chapters.length) return 0;
@@ -253,27 +288,75 @@ export default function LayoutPanel({ bookId }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex items-center border border-border rounded-md overflow-hidden">
-            <button
-              onClick={() => setViewMode("single")}
-              className={cn(
-                "px-2.5 py-1.5 text-xs transition-colors",
-                viewMode === "single" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
-              )}
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))}
+              disabled={zoom <= ZOOM_MIN}
             >
-              <FileText className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("double")}
-              className={cn(
-                "px-2.5 py-1.5 text-xs transition-colors",
-                viewMode === "double" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
-              )}
+              <ZoomOut className="w-3.5 h-3.5" />
+            </Button>
+            <div className="w-24">
+              <Slider
+                value={[zoom]}
+                onValueChange={([v]) => setZoom(v)}
+                min={ZOOM_MIN}
+                max={ZOOM_MAX}
+                step={ZOOM_STEP}
+                className="w-full"
+              />
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))}
+              disabled={zoom >= ZOOM_MAX}
             >
-              <BookOpen className="w-3.5 h-3.5" />
-            </button>
+              <ZoomIn className="w-3.5 h-3.5" />
+            </Button>
+            <span className="text-[11px] text-muted-foreground w-9 text-center tabular-nums">{zoom}%</span>
           </div>
+
+          <Separator orientation="vertical" className="h-5" />
+
+          {/* View mode toggle */}
+          {!readingMode && (
+            <div className="flex items-center border border-border rounded-md overflow-hidden">
+              <button
+                onClick={() => setViewMode("single")}
+                className={cn(
+                  "px-2.5 py-1.5 text-xs transition-colors",
+                  viewMode === "single" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <FileText className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode("double")}
+                className={cn(
+                  "px-2.5 py-1.5 text-xs transition-colors",
+                  viewMode === "double" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Reading mode */}
+          <Button
+            size="sm"
+            variant={readingMode ? "default" : "ghost"}
+            onClick={toggleReadingMode}
+            className="gap-1.5 text-xs"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            {readingMode ? "Salir lectura" : "Modo lectura"}
+          </Button>
 
           <Separator orientation="vertical" className="h-5" />
 
@@ -283,19 +366,21 @@ export default function LayoutPanel({ bookId }: Props) {
             {isExporting ? "Generando…" : "Exportar PDF"}
           </Button>
 
-          <Separator orientation="vertical" className="h-5" />
-
-          {/* Settings toggle */}
-          <Button
-            size="sm"
-            variant={settingsOpen ? "default" : "ghost"}
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className="gap-1.5 text-xs"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            Ajustes
-            {settingsOpen ? <PanelRightClose className="w-3 h-3" /> : <PanelRightOpen className="w-3 h-3" />}
-          </Button>
+          {!readingMode && (
+            <>
+              <Separator orientation="vertical" className="h-5" />
+              <Button
+                size="sm"
+                variant={settingsOpen ? "default" : "ghost"}
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className="gap-1.5 text-xs"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Ajustes
+                {settingsOpen ? <PanelRightClose className="w-3 h-3" /> : <PanelRightOpen className="w-3 h-3" />}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -303,10 +388,15 @@ export default function LayoutPanel({ bookId }: Props) {
       <div className="flex flex-1 overflow-hidden">
         {/* Book viewer */}
         <ScrollArea className="flex-1">
-          <div className={cn(
-            "min-h-full",
-            "bg-gradient-to-b from-muted/40 to-muted/20",
-          )}>
+          <div
+            ref={viewerRef}
+            className={cn(
+              "min-h-full",
+              readingMode
+                ? "bg-[hsl(var(--muted)/0.15)]"
+                : "bg-gradient-to-b from-muted/40 to-muted/20",
+            )}
+          >
             <BookPagePreview
               chapters={chapters}
               pageW={activePage.w}
@@ -318,7 +408,7 @@ export default function LayoutPanel({ bookId }: Props) {
               fontSize={fontSize}
               lineHeight={lineHeight}
               subchapterMode={subchapterMode}
-              viewMode={viewMode}
+              viewMode={readingMode ? "single" : viewMode}
               insertBlankPages={insertBlankPages}
               scale={scale}
             />
