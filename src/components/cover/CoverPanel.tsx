@@ -264,8 +264,31 @@ export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor
                 </Button>
               )}
             </div>
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="ai" className="flex-1 mt-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                <AiCoverWizard
+                  initialTitle={title}
+                  initialSubtitle={subtitle}
+                  initialAuthor={author}
+                  onApplyImage={(dataUrl) => setBgImage(dataUrl)}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="gallery" className="flex-1 mt-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                <CoverGallery />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
