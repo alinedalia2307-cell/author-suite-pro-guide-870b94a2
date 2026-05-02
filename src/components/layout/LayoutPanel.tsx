@@ -5,7 +5,7 @@ import {
   PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut,
   Eye,
 } from "lucide-react";
-import BookPagePreview, { SubchapterMode, ViewMode, buildPages, SECTION_ORDER } from "./BookPagePreview";
+import BookPagePreview, { SubchapterMode, ViewMode, buildPages, resolveFootnoteGroupId, sortChaptersForLayout } from "./BookPagePreview";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -155,12 +155,7 @@ export default function LayoutPanel({ bookId }: Props) {
         isFirstPage = false;
       }
 
-      const sorted = [...chapters].sort((a, b) => {
-        const oa = SECTION_ORDER[a.section_type] ?? 99;
-        const ob = SECTION_ORDER[b.section_type] ?? 99;
-        if (oa !== ob) return oa - ob;
-        return a.position - b.position;
-      });
+      const sorted = sortChaptersForLayout(chapters);
 
       let pageNum = cover ? 2 : 1;
       let chapterCount = 0;
@@ -168,6 +163,8 @@ export default function LayoutPanel({ bookId }: Props) {
 
       // Pending footnotes for current chapter (rendered at end of chapter)
       let pendingChapterFns: { n: number; content: string }[] = [];
+      let currentChapterGroupId: string | null = null;
+      let activeFootnoteGroupId: string | null = null;
       let cursorY = mV;
 
       const ensureSpace = (h: number) => {
@@ -217,10 +214,16 @@ export default function LayoutPanel({ bookId }: Props) {
 
         const isContinue = isSubchapter && subchapterMode === "same-page";
 
-        // Flush footnotes of previous chapter when a new chapter (or non-subchapter section) starts
-        if (isChapter || (!isSubchapter && si > 0)) {
+        if (isChapter) currentChapterGroupId = section.id;
+        else if (!isSubchapter) currentChapterGroupId = null;
+
+        const footnoteGroupId = resolveFootnoteGroupId(section, currentChapterGroupId);
+
+        if (activeFootnoteGroupId !== null && footnoteGroupId !== activeFootnoteGroupId) {
           flushChapterFootnotes();
         }
+
+        activeFootnoteGroupId = footnoteGroupId;
 
         if (!isContinue) {
           if (!isFirstPage) pdf.addPage();
