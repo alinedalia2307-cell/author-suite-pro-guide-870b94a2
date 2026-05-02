@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import mammoth from "mammoth";
+import FootnoteAwareEditor from "./FootnoteAwareEditor";
 
 interface Props {
   bookId: string;
@@ -288,19 +289,22 @@ export default function ManuscriptEditor({ bookId }: Props) {
 
         {/* Editor */}
         <div
-          className="flex-1 overflow-y-auto"
+          className="flex-1 min-h-0"
           onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
         >
-          <div className="max-w-2xl mx-auto px-8 py-10">
-            <textarea
-              value={content}
-              onChange={(e) => updateContent(e.target.value)}
-              placeholder="Empieza a escribir…"
-              className="w-full min-h-[60vh] resize-none border-0 bg-transparent font-body text-base leading-[1.9] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-0"
-              spellCheck
+          {activeId ? (
+            <FootnoteAwareEditor
+              chapterId={activeId}
+              content={content}
+              onContentChange={updateContent}
+              fontFamily="'Source Sans 3', sans-serif"
             />
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+              Selecciona una sección para empezar a escribir.
+            </div>
+          )}
         </div>
 
         {/* Status bar */}
