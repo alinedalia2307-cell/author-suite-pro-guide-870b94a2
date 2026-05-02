@@ -8,8 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CoverPreview, { CoverStyle, TextAlign } from "./CoverPreview";
 import { useBookCover, BookCoverInput } from "@/hooks/useBookCover";
+import AiCoverWizard from "./ai/AiCoverWizard";
+import CoverGallery from "./ai/CoverGallery";
 
 interface Props {
   bookId: string;
@@ -130,13 +133,20 @@ export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor
       </div>
 
       {/* Settings */}
-      <div className="w-80 shrink-0 border-l border-border bg-muted/30">
-        <div className="px-4 py-3 border-b border-border">
-          <h3 className="text-sm font-semibold text-foreground">Diseño de portada</h3>
-        </div>
+      <div className="w-96 shrink-0 border-l border-border bg-muted/30 flex flex-col">
+        <Tabs defaultValue="design" className="flex flex-col h-full">
+          <div className="px-4 pt-3 pb-2 border-b border-border">
+            <TabsList className="w-full grid grid-cols-3 h-9">
+              <TabsTrigger value="design" className="text-xs">Diseño</TabsTrigger>
+              <TabsTrigger value="ai" className="text-xs">Asistente IA</TabsTrigger>
+              <TabsTrigger value="gallery" className="text-xs">Galería</TabsTrigger>
+            </TabsList>
+          </div>
 
-        <ScrollArea className="h-[calc(100%-48px)]">
-          <div className="p-4 space-y-5">
+          <TabsContent value="design" className="flex-1 mt-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-5">
+                <h3 className="text-sm font-semibold text-foreground">Diseño de portada</h3>
             {/* Text fields */}
             <div className="space-y-3">
               <Label className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -254,8 +264,31 @@ export default function CoverPanel({ bookId, bookTitle, bookSubtitle, bookAuthor
                 </Button>
               )}
             </div>
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="ai" className="flex-1 mt-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                <AiCoverWizard
+                  initialTitle={title}
+                  initialSubtitle={subtitle}
+                  initialAuthor={author}
+                  onApplyImage={(dataUrl) => setBgImage(dataUrl)}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="gallery" className="flex-1 mt-0 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                <CoverGallery />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
