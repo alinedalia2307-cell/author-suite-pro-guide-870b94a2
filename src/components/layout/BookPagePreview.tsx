@@ -57,6 +57,21 @@ const SECTION_LABELS: Record<string, string> = {
   texto_libre: "",
 };
 
+export function sortChaptersForLayout(chapters: Chapter[]): Chapter[] {
+  return [...chapters].sort((a, b) => {
+    if (a.position !== b.position) return a.position - b.position;
+    const oa = SECTION_ORDER[a.section_type] ?? 99;
+    const ob = SECTION_ORDER[b.section_type] ?? 99;
+    return oa - ob;
+  });
+}
+
+export function resolveFootnoteGroupId(section: Chapter, currentChapterGroupId: string | null): string {
+  if (section.section_type === "capitulo") return section.id;
+  if (section.section_type === "subcapitulo") return currentChapterGroupId ?? section.id;
+  return section.id;
+}
+
 function tokenize(text: string, numbering: Map<string, number>): InlineSegment[] {
   const re = new RegExp(FOOTNOTE_REGEX.source, "g");
   const out: InlineSegment[] = [];
@@ -99,12 +114,7 @@ export function buildPages(
   const scaledH = pageH * scale;
   const contentH = scaledH - scaledMV * 2;
 
-  const sorted = [...chapters].sort((a, b) => {
-    const oa = SECTION_ORDER[a.section_type] ?? 99;
-    const ob = SECTION_ORDER[b.section_type] ?? 99;
-    if (oa !== ob) return oa - ob;
-    return a.position - b.position;
-  });
+  const sorted = sortChaptersForLayout(chapters);
 
   const result: PageContent[] = [];
   let currentElements: PageElement[] = [];
@@ -145,6 +155,8 @@ export function buildPages(
   let footnoteCounter = 0;
   // Pending footnotes accumulated within the current chapter (rendered at chapter end)
   let pendingChapterFns: { n: number; content: string }[] = [];
+  let currentChapterGroupId: string | null = null;
+  let activeFootnoteGroupId: string | null = null;
 
   const flushChapterFootnotes = () => {
     if (!pendingChapterFns.length) return;
@@ -165,12 +177,17 @@ export function buildPages(
     const isChapter = chapter.section_type === "capitulo";
     const isSubchapter = chapter.section_type === "subcapitulo";
 
-    // Detect chapter boundary: when the next section is a chapter (or end) and current chapter group ends,
-    // we flush footnotes belonging to the chapter that just ended.
-    if (isChapter || (!isSubchapter && ci > 0)) {
+    if (isChapter) currentChapterGroupId = chapter.id;
+    else if (!isSubchapter) currentChapterGroupId = null;
+
+    const footnoteGroupId = resolveFootnoteGroupId(chapter, currentChapterGroupId);
+
+    if (activeFootnoteGroupId !== null && footnoteGroupId !== activeFootnoteGroupId) {
       flushChapterFootnotes();
       footnoteCounter = 0;
     }
+
+    activeFootnoteGroupId = footnoteGroupId;
 
     const chapterFootnotes = allFootnotes.filter((f) => f.chapter_id === chapter.id);
     const numbering = new Map<string, number>();
