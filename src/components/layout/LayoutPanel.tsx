@@ -240,12 +240,16 @@ export default function LayoutPanel({ bookId }: Props) {
           pageNum++;
           cursorY = mV;
 
+          // Blank page goes BEFORE the chapter header so the header is only
+          // painted once, on the recto page right after the blank.
           if (insertBlankPages && (isChapter || !isSubchapter) && pageNum % 2 === 0) {
             pdf.addPage();
             pageNum++;
+            cursorY = mV;
           }
         }
 
+        // Increment chapter counter exactly once per real chapter section.
         if (isChapter) {
           chapterCount++;
         }
