@@ -139,6 +139,36 @@ export type Database = {
           },
         ]
       }
+      footnotes: {
+        Row: {
+          chapter_id: string
+          content: string
+          created_at: string
+          id: string
+          marker: string
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          chapter_id: string
+          content?: string
+          created_at?: string
+          id?: string
+          marker: string
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          chapter_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          marker?: string
+          position?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manuscripts: {
         Row: {
           book_id: string
