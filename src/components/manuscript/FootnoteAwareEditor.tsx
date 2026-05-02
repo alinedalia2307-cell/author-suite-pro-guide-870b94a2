@@ -83,8 +83,8 @@ export default function FootnoteAwareEditor({ chapterId, content, onContentChang
       "lineHeight", "letterSpacing", "padding", "border", "whiteSpace",
       "wordWrap", "overflowWrap",
     ].forEach((p) => {
-      // @ts-expect-error – dynamic style copy
-      mirror.style[p] = style[p];
+      (mirror.style as unknown as Record<string, string>)[p] =
+        (style as unknown as Record<string, string>)[p];
     });
     mirror.style.position = "absolute";
     mirror.style.visibility = "hidden";
