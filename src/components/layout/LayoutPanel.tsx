@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChapters, Chapter } from "@/hooks/useChapters";
+import { useAllFootnotes, FOOTNOTE_REGEX } from "@/hooks/useFootnotes";
 import { useBookCover } from "@/hooks/useBookCover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ const ZOOM_DEFAULT = 130;
 
 export default function LayoutPanel({ bookId }: Props) {
   const { chapters, isLoading } = useChapters(bookId);
+  const { data: allFootnotes = [] } = useAllFootnotes(chapters.map((c) => c.id));
   const { cover } = useBookCover(bookId);
   const { toast } = useToast();
   const viewerRef = useRef<HTMLDivElement>(null);
