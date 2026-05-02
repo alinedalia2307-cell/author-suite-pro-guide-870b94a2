@@ -481,6 +481,7 @@ export default function LayoutPanel({ bookId }: Props) {
           >
             <BookPagePreview
               chapters={chapters}
+              footnotes={allFootnotes}
               pageW={activePage.w}
               pageH={activePage.h}
               marginH={marginH}
