@@ -5,7 +5,16 @@ import {
   PanelRightClose, PanelRightOpen, ZoomIn, ZoomOut,
   Eye,
 } from "lucide-react";
-import BookPagePreview, { SubchapterMode, ViewMode, buildPages, resolveFootnoteGroupId, sortChaptersForLayout } from "./BookPagePreview";
+import BookPagePreview from "./BookPagePreview";
+// Pagination + ordering helpers come from the shared engine so the on-screen
+// page count and the PDF exporter never drift apart.
+import {
+  buildPages,
+  resolveFootnoteGroupId,
+  sortChaptersForLayout,
+  type SubchapterMode,
+  type ViewMode,
+} from "@/lib/layout/paginate";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
