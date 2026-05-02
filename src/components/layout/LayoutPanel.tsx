@@ -311,6 +311,24 @@ export default function LayoutPanel({ bookId }: Props) {
         pdf.setTextColor(51, 51, 51);
 
         const paragraphs = section.content.split("\n").filter((p) => p.trim());
+
+        // The chapter header ("CAPÍTULO N" + title) is already drawn above.
+        // If the author also wrote the title as the first line of the body
+        // (e.g. "Capítulo 1", "CAPÍTULO 1: Título" or the bare title), strip
+        // it so it doesn't appear duplicated in the PDF.
+        if ((isChapter || !isSubchapter) && paragraphs.length > 0) {
+          const first = paragraphs[0].trim().replace(/\s+/g, " ");
+          const titleNorm = (section.title || "").trim().replace(/\s+/g, " ");
+          const chapterPattern = isChapter
+            ? new RegExp(`^cap[ií]tulo\\s+${chapterCount}\\b\\s*[:\\.\\-–—]?\\s*(.*)$`, "i")
+            : null;
+          const matchesTitle = titleNorm.length > 0 && first.toLowerCase() === titleNorm.toLowerCase();
+          const matchesChapterLabel = chapterPattern ? chapterPattern.test(first) : false;
+          if (matchesTitle || matchesChapterLabel) {
+            paragraphs.shift();
+          }
+        }
+
         for (let pi = 0; pi < paragraphs.length; pi++) {
           let para = paragraphs[pi];
           const reF = new RegExp(FOOTNOTE_REGEX.source, "g");
