@@ -15,6 +15,14 @@ import {
   type SubchapterMode,
   type ViewMode,
 } from "@/lib/layout/paginate";
+// Phase 2.1: parallel PDF renderer based on PageContent. Kept behind a
+// feature flag below; the legacy exporter remains the active one.
+import { renderPagesToPdf } from "@/lib/layout/renderPdf";
+
+// Feature flag for the new PageContent-based PDF renderer.
+// Keep false until validated — flipping to true swaps the body of the PDF
+// (the cover is still drawn by the legacy code path before delegation).
+const USE_PAGECONTENT_RENDERER = false;
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
