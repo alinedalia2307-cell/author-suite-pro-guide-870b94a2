@@ -164,27 +164,80 @@ export default function LayoutPanel({ bookId }: Props) {
 
       let pageNum = cover ? 2 : 1;
       let chapterCount = 0;
+      const fnLineHeightMm = (fSize - 2) * 0.3528 * 1.4;
+      const fnSeparatorMm = 4;
+
+      // Pending footnotes for current page: { n, content }
+      let pendingFootnotes: { n: number; content: string }[] = [];
+
+      const footnotesBlockHeightMm = (fns: { n: number; content: string }[]) => {
+        if (!fns.length) return 0;
+        let h = fnSeparatorMm;
+        for (const f of fns) {
+          const text = `${f.n}. ${f.content}`;
+          const lines = pdf.splitTextToSize(text, contentW);
+          h += lines.length * fnLineHeightMm;
+        }
+        return h;
+      };
+
+      const flushFootnotes = () => {
+        if (!pendingFootnotes.length) return;
+        const blockH = footnotesBlockHeightMm(pendingFootnotes);
+        let y = pageH - mV - blockH + fnSeparatorMm;
+        // separator line
+        pdf.setDrawColor(136, 136, 136);
+        pdf.setLineWidth(0.2);
+        pdf.line(mInner, y - 2, mInner + contentW * 0.3, y - 2);
+        pdf.setFontSize(fSize - 2);
+        pdf.setTextColor(68, 68, 68);
+        for (const f of pendingFootnotes) {
+          const text = `${f.n}. ${f.content}`;
+          const lines = pdf.splitTextToSize(text, contentW);
+          for (const ln of lines) {
+            pdf.text(ln, mInner, y);
+            y += fnLineHeightMm;
+          }
+        }
+        pendingFootnotes = [];
+      };
 
       for (const section of sorted) {
         if (!section.content.trim()) continue;
         const isChapter = section.section_type === "capitulo";
         const isSubchapter = section.section_type === "subcapitulo";
 
-        const needsNewPage = isChapter || (!isSubchapter);
         const isContinue = isSubchapter && subchapterMode === "same-page";
 
         if (!isContinue) {
+          // Flush footnotes of previous page before starting new
+          flushFootnotes();
           if (!isFirstPage) pdf.addPage();
           isFirstPage = false;
           pageNum++;
 
-          if (insertBlankPages && needsNewPage && pageNum % 2 === 0) {
-            pdf.addPage(); // blank page
+          if (insertBlankPages && (isChapter || !isSubchapter) && pageNum % 2 === 0) {
+            pdf.addPage();
             pageNum++;
           }
         }
 
-        if (isChapter) chapterCount++;
+        if (isChapter) {
+          chapterCount++;
+        }
+
+        // Build numbering for this chapter (continuous per chapter)
+        const chapterFns = allFootnotes.filter((f) => f.chapter_id === section.id);
+        const numbering = new Map<string, number>();
+        const reN = new RegExp(FOOTNOTE_REGEX.source, "g");
+        let mn: RegExpExecArray | null;
+        let counter = 0;
+        while ((mn = reN.exec(section.content)) !== null) {
+          if (!numbering.has(mn[1])) {
+            counter++;
+            numbering.set(mn[1], counter);
+          }
+        }
 
         // Header
         pdf.setTextColor(26, 26, 26);
@@ -202,9 +255,6 @@ export default function LayoutPanel({ bookId }: Props) {
           pdf.text(section.title, pageW / 2, startY, { align: "center" });
           startY += 12;
         } else if (isSubchapter) {
-          if (subchapterMode === "same-page") {
-            // continue from current cursor - we need to track this
-          }
           pdf.setFontSize(13);
           pdf.setFont("helvetica", "bold");
           startY = mV + 10;
@@ -236,20 +286,50 @@ export default function LayoutPanel({ bookId }: Props) {
 
         const paragraphs = section.content.split("\n").filter((p) => p.trim());
         for (let pi = 0; pi < paragraphs.length; pi++) {
-          const para = paragraphs[pi];
+          let para = paragraphs[pi];
+          // Find footnotes referenced in this paragraph (in order)
+          const paraFns: { n: number; content: string }[] = [];
+          const reF = new RegExp(FOOTNOTE_REGEX.source, "g");
+          let mf: RegExpExecArray | null;
+          while ((mf = reF.exec(para)) !== null) {
+            const n = numbering.get(mf[1]);
+            if (n !== undefined) {
+              const fn = chapterFns.find((f) => f.marker === mf![1]);
+              paraFns.push({ n, content: fn?.content ?? "" });
+            }
+          }
+          // Replace markers with superscript-like text "[n]"
+          para = para.replace(new RegExp(FOOTNOTE_REGEX.source, "g"), (_, mk) => {
+            const n = numbering.get(mk);
+            return n !== undefined ? `[${n}]` : "";
+          });
+
           const indent = pi > 0 ? 5 : 0;
           const lines = pdf.splitTextToSize(para, contentW - indent);
+          // Reserve space for footnotes that would be added by this paragraph
+          const reservedH = footnotesBlockHeightMm([...pendingFootnotes, ...paraFns]);
+
           for (let li = 0; li < lines.length; li++) {
-            if (cursorY + lineHeightMm > pageH - mV) {
+            if (cursorY + lineHeightMm > pageH - mV - reservedH) {
+              flushFootnotes();
               pdf.addPage();
               pageNum++;
               cursorY = mV;
+              pdf.setFont("helvetica", "normal");
+              pdf.setFontSize(fSize);
+              pdf.setTextColor(51, 51, 51);
             }
             pdf.text(lines[li], (li === 0 ? mInner + indent : mInner), cursorY);
             cursorY += lineHeightMm;
           }
+
+          // Add this paragraph's footnotes to the pending queue for current page
+          pendingFootnotes.push(...paraFns);
         }
       }
+
+      // Flush footnotes of the very last page
+      flushFootnotes();
 
       pdf.save(`${cover?.title || "libro"}.pdf`);
       toast({ title: "PDF exportado", description: `${totalPages} páginas generadas correctamente.` });
