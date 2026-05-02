@@ -277,10 +277,22 @@ export default function LayoutPanel({ bookId }: Props) {
           pdf.setTextColor(136, 136, 136);
           pdf.text(`CAPÍTULO ${chapterCount}`, pageW / 2, cursorY, { align: "center" });
           cursorY += 8;
-          pdf.setTextColor(26, 26, 26);
-          pdf.setFontSize(16);
-          pdf.text(section.title, pageW / 2, cursorY, { align: "center" });
-          cursorY += 12;
+          // Avoid duplicating the chapter label when section.title is itself
+          // just "Capítulo N" (any case / spacing). Only render section.title
+          // when it carries a real, distinct title.
+          const titleNormHeader = (section.title || "").trim().replace(/\s+/g, " ");
+          const isPlainChapterLabel = new RegExp(
+            `^cap[ií]tulo\\s+${chapterCount}\\s*$`,
+            "i"
+          ).test(titleNormHeader);
+          if (!isPlainChapterLabel && titleNormHeader.length > 0) {
+            pdf.setTextColor(26, 26, 26);
+            pdf.setFontSize(16);
+            pdf.text(section.title, pageW / 2, cursorY, { align: "center" });
+            cursorY += 12;
+          } else {
+            cursorY += 4;
+          }
         } else if (isSubchapter) {
           pdf.setFontSize(13);
           pdf.setFont("helvetica", "bold");
@@ -312,6 +324,21 @@ export default function LayoutPanel({ bookId }: Props) {
 
         const paragraphs = section.content.split("\n").filter((p) => p.trim());
 
+        // Collect footnotes from the FULL content first, so the visual filter
+        // below (which may strip a duplicated title line) cannot cause notes
+        // to be lost. Guarded against duplicates by checking pendingChapterFns.
+        {
+          const reCollect = new RegExp(FOOTNOTE_REGEX.source, "g");
+          let mc: RegExpExecArray | null;
+          while ((mc = reCollect.exec(section.content)) !== null) {
+            const n = numbering.get(mc[1]);
+            if (n !== undefined && !pendingChapterFns.some((p) => p.n === n)) {
+              const fn = chapterFns.find((f) => f.marker === mc![1]);
+              pendingChapterFns.push({ n, content: fn?.content ?? "" });
+            }
+          }
+        }
+
         // The chapter header ("CAPÍTULO N" + title) is already drawn above.
         // If the author also wrote the title as the first line of the body
         // (e.g. "Capítulo 1", "CAPÍTULO 1: Título" or the bare title), strip
@@ -331,15 +358,8 @@ export default function LayoutPanel({ bookId }: Props) {
 
         for (let pi = 0; pi < paragraphs.length; pi++) {
           let para = paragraphs[pi];
-          const reF = new RegExp(FOOTNOTE_REGEX.source, "g");
-          let mf: RegExpExecArray | null;
-          while ((mf = reF.exec(para)) !== null) {
-            const n = numbering.get(mf[1]);
-            if (n !== undefined && !pendingChapterFns.some((p) => p.n === n)) {
-              const fn = chapterFns.find((f) => f.marker === mf![1]);
-              pendingChapterFns.push({ n, content: fn?.content ?? "" });
-            }
-          }
+          // Footnotes already collected above from full content — only do
+          // the marker→[N] replacement here for the visible body.
           para = para.replace(new RegExp(FOOTNOTE_REGEX.source, "g"), (_, mk) => {
             const n = numbering.get(mk);
             return n !== undefined ? `[${n}]` : "";
