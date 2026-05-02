@@ -277,10 +277,22 @@ export default function LayoutPanel({ bookId }: Props) {
           pdf.setTextColor(136, 136, 136);
           pdf.text(`CAPÍTULO ${chapterCount}`, pageW / 2, cursorY, { align: "center" });
           cursorY += 8;
-          pdf.setTextColor(26, 26, 26);
-          pdf.setFontSize(16);
-          pdf.text(section.title, pageW / 2, cursorY, { align: "center" });
-          cursorY += 12;
+          // Avoid duplicating the chapter label when section.title is itself
+          // just "Capítulo N" (any case / spacing). Only render section.title
+          // when it carries a real, distinct title.
+          const titleNormHeader = (section.title || "").trim().replace(/\s+/g, " ");
+          const isPlainChapterLabel = new RegExp(
+            `^cap[ií]tulo\\s+${chapterCount}\\s*$`,
+            "i"
+          ).test(titleNormHeader);
+          if (!isPlainChapterLabel && titleNormHeader.length > 0) {
+            pdf.setTextColor(26, 26, 26);
+            pdf.setFontSize(16);
+            pdf.text(section.title, pageW / 2, cursorY, { align: "center" });
+            cursorY += 12;
+          } else {
+            cursorY += 4;
+          }
         } else if (isSubchapter) {
           pdf.setFontSize(13);
           pdf.setFont("helvetica", "bold");
