@@ -37,7 +37,6 @@ interface PageContent {
   elements: PageElement[];
   pageNumber: number;
   isBlank?: boolean;
-  footnotes?: { n: number; content: string }[];
 }
 
 type InlineSegment = { type: "text"; text: string } | { type: "fn"; n: number };
@@ -46,7 +45,9 @@ type PageElement =
   | { type: "chapter-header"; chapterNum: number; title: string }
   | { type: "subchapter-header"; title: string }
   | { type: "section-header"; title: string; sectionType: string }
-  | { type: "paragraph"; segments: InlineSegment[]; indent: boolean };
+  | { type: "paragraph"; segments: InlineSegment[]; indent: boolean }
+  | { type: "footnotes-heading" }
+  | { type: "footnote-item"; n: number; content: string };
 
 const SECTION_LABELS: Record<string, string> = {
   dedicatoria: "Dedicatoria",
@@ -107,7 +108,6 @@ export function buildPages(
 
   const result: PageContent[] = [];
   let currentElements: PageElement[] = [];
-  let currentFootnotes: { n: number; content: string }[] = [];
   let usedHeight = 0;
   let pageNum = 1;
 
@@ -116,28 +116,12 @@ export function buildPages(
   const avgContentW = scaledW - scaledMH - scaledMInner;
   const charsPerLine = Math.max(1, Math.floor(avgContentW / (scaledFont * 0.52)));
   const fnCharsPerLine = Math.max(1, Math.floor(avgContentW / (scaledFootnoteFont * 0.52)));
-  const footnoteSeparatorH = 12;
-
-  const footnotesBlockHeight = () => {
-    if (!currentFootnotes.length) return 0;
-    let h = footnoteSeparatorH;
-    for (const f of currentFootnotes) {
-      const lines = Math.max(1, Math.ceil((`${f.n}. ${f.content}`).length / fnCharsPerLine));
-      h += lines * footnoteLineHeightPx;
-    }
-    return h;
-  };
 
   const flushPage = () => {
     if (currentElements.length > 0) {
-      result.push({
-        elements: currentElements,
-        pageNumber: pageNum,
-        footnotes: currentFootnotes.length ? currentFootnotes : undefined,
-      });
+      result.push({ elements: currentElements, pageNumber: pageNum });
       pageNum++;
       currentElements = [];
-      currentFootnotes = [];
       usedHeight = 0;
     }
   };
@@ -149,32 +133,45 @@ export function buildPages(
     pageNum++;
   };
 
-  const addElement = (el: PageElement, height: number, fns: { n: number; content: string }[] = []) => {
-    const fnsHeight = fns.reduce((acc, f) => {
-      const lines = Math.max(1, Math.ceil((`${f.n}. ${f.content}`).length / fnCharsPerLine));
-      return acc + lines * footnoteLineHeightPx;
-    }, 0);
-    const extraSep = currentFootnotes.length === 0 && fns.length > 0 ? footnoteSeparatorH : 0;
-    if (usedHeight + height + footnotesBlockHeight() + fnsHeight + extraSep > contentH && currentElements.length > 0) {
+  const addElement = (el: PageElement, height: number) => {
+    if (usedHeight + height > contentH && currentElements.length > 0) {
       flushPage();
     }
     currentElements.push(el);
     usedHeight += height;
-    if (fns.length) currentFootnotes.push(...fns);
   };
 
-  // Numbering: continuous per chapter
   let chapterCount = 0;
   let footnoteCounter = 0;
+  // Pending footnotes accumulated within the current chapter (rendered at chapter end)
+  let pendingChapterFns: { n: number; content: string }[] = [];
 
-  for (const chapter of sorted) {
+  const flushChapterFootnotes = () => {
+    if (!pendingChapterFns.length) return;
+    // Heading
+    const headingH = scaledSubtitleFont * 1.5 + scaledFont * 0.6;
+    addElement({ type: "footnotes-heading" }, headingH);
+    for (const f of pendingChapterFns) {
+      const text = `${f.n}. ${f.content || "(sin contenido)"}`;
+      const lines = Math.max(1, Math.ceil(text.length / fnCharsPerLine));
+      const h = lines * footnoteLineHeightPx + scaledFootnoteFont * 0.3;
+      addElement({ type: "footnote-item", n: f.n, content: f.content }, h);
+    }
+    pendingChapterFns = [];
+  };
+
+  for (let ci = 0; ci < sorted.length; ci++) {
+    const chapter = sorted[ci];
     const isChapter = chapter.section_type === "capitulo";
     const isSubchapter = chapter.section_type === "subcapitulo";
 
-    // Reset footnote numbering when starting a new chapter
-    if (isChapter) footnoteCounter = 0;
+    // Detect chapter boundary: when the next section is a chapter (or end) and current chapter group ends,
+    // we flush footnotes belonging to the chapter that just ended.
+    if (isChapter || (!isSubchapter && ci > 0)) {
+      flushChapterFootnotes();
+      footnoteCounter = 0;
+    }
 
-    // Build per-chapter numbering map for inline markers
     const chapterFootnotes = allFootnotes.filter((f) => f.chapter_id === chapter.id);
     const numbering = new Map<string, number>();
     const re = new RegExp(FOOTNOTE_REGEX.source, "g");
@@ -206,24 +203,24 @@ export function buildPages(
     const paragraphs = chapter.content.split("\n").filter((p) => p.trim() !== "");
     paragraphs.forEach((para, j) => {
       const segments = tokenize(para, numbering);
-      // Determine plain length for line estimation (markers replaced with " ¹ ")
       const plainLen = segments.reduce((acc, s) => acc + (s.type === "text" ? s.text.length : 2), 0);
       const lines = Math.max(1, Math.ceil(plainLen / charsPerLine));
       const paraHeight = lines * lineHeightPx;
-      // Footnotes referenced in this paragraph
-      const fns: { n: number; content: string }[] = [];
       for (const seg of segments) {
         if (seg.type === "fn") {
-          // Find content for marker -> need to map back; reverse lookup
           const marker = [...numbering.entries()].find(([, v]) => v === seg.n)?.[0];
           const fn = chapterFootnotes.find((f) => f.marker === marker);
-          if (fn) fns.push({ n: seg.n, content: fn.content });
+          if (fn && !pendingChapterFns.some((p) => p.n === seg.n)) {
+            pendingChapterFns.push({ n: seg.n, content: fn.content });
+          }
         }
       }
-      addElement({ type: "paragraph", segments, indent: j > 0 }, paraHeight, fns);
+      addElement({ type: "paragraph", segments, indent: j > 0 }, paraHeight);
     });
   }
 
+  // Flush footnotes of the very last chapter
+  flushChapterFootnotes();
   flushPage();
   return result.length ? result : [{ elements: [{ type: "paragraph", segments: [{ type: "text", text: "(Sin contenido)" }], indent: false }], pageNumber: 1 }];
 }
@@ -299,81 +296,66 @@ export default function BookPagePreview({
                 hyphens: "auto" as const,
                 wordBreak: "break-word" as const,
                 overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
               }}
             >
-              <div style={{ flex: 1 }}>
-                {page.elements.map((el, j) => {
-                  if (el.type === "chapter-header") {
-                    return (
-                      <div key={j} style={{ textAlign: "center", marginBottom: `${scaledFont}px`, paddingTop: `${scaledFont * 2}px` }}>
-                        <div style={{ fontFamily, fontSize: `${scaledFont * 0.85}px`, letterSpacing: "0.15em", textTransform: "uppercase" as const, color: "#888", marginBottom: `${scaledFont * 0.3}px` }}>
-                          Capítulo {el.chapterNum}
-                        </div>
-                        <div style={{ fontFamily, fontSize: `${scaledTitleFont}px`, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3 }}>
-                          {el.title}
-                        </div>
+              {page.elements.map((el, j) => {
+                if (el.type === "chapter-header") {
+                  return (
+                    <div key={j} style={{ textAlign: "center", marginBottom: `${scaledFont}px`, paddingTop: `${scaledFont * 2}px` }}>
+                      <div style={{ fontFamily, fontSize: `${scaledFont * 0.85}px`, letterSpacing: "0.15em", textTransform: "uppercase" as const, color: "#888", marginBottom: `${scaledFont * 0.3}px` }}>
+                        Capítulo {el.chapterNum}
                       </div>
-                    );
-                  }
-                  if (el.type === "subchapter-header") {
-                    return (
-                      <div key={j} style={{ fontFamily, fontSize: `${scaledSubtitleFont}px`, fontWeight: 700, color: "#1a1a1a", textAlign: "left", marginTop: `${scaledFont * 1.2}px`, marginBottom: `${scaledFont * 0.5}px` }}>
+                      <div style={{ fontFamily, fontSize: `${scaledTitleFont}px`, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3 }}>
                         {el.title}
                       </div>
-                    );
-                  }
-                  if (el.type === "section-header") {
-                    return (
-                      <div key={j} style={{ textAlign: "center", marginBottom: `${scaledFont}px`, paddingTop: `${scaledFont * 2}px` }}>
-                        {SECTION_LABELS[el.sectionType] && (
-                          <div style={{ fontFamily, fontSize: `${scaledFont * 0.85}px`, letterSpacing: "0.15em", textTransform: "uppercase" as const, color: "#888", marginBottom: `${scaledFont * 0.3}px` }}>
-                            {SECTION_LABELS[el.sectionType]}
-                          </div>
-                        )}
-                        <div style={{ fontFamily, fontSize: `${scaledTitleFont}px`, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3 }}>
-                          {el.title}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <p key={j} style={{ margin: 0, textIndent: el.indent ? `${scaledFont * 1.5}px` : "0" }}>
-                      {renderSegments(el.segments)}
-                    </p>
+                    </div>
                   );
-                })}
-              </div>
-
-              {/* Footnotes block */}
-              {page.footnotes && page.footnotes.length > 0 && (
-                <div style={{ marginTop: "auto", paddingTop: `${scaledFont * 0.6}px` }}>
-                  <div
-                    style={{
-                      width: "30%",
-                      borderTop: "1px solid #888",
-                      marginBottom: `${scaledFont * 0.5}px`,
-                    }}
-                  />
-                  <div
-                    style={{
-                      fontFamily,
-                      fontSize: `${scaledFootnoteFont}px`,
-                      lineHeight: 1.4,
-                      color: "#444",
-                      textAlign: "left",
-                    }}
-                  >
-                    {page.footnotes.map((f, k) => (
-                      <div key={k} style={{ marginBottom: `${scaledFootnoteFont * 0.3}px`, display: "flex", gap: "4px" }}>
-                        <sup style={{ fontWeight: 600 }}>{f.n}</sup>
-                        <span style={{ flex: 1 }}>{f.content || <em style={{ color: "#aaa" }}>(sin contenido)</em>}</span>
+                }
+                if (el.type === "subchapter-header") {
+                  return (
+                    <div key={j} style={{ fontFamily, fontSize: `${scaledSubtitleFont}px`, fontWeight: 700, color: "#1a1a1a", textAlign: "left", marginTop: `${scaledFont * 1.2}px`, marginBottom: `${scaledFont * 0.5}px` }}>
+                      {el.title}
+                    </div>
+                  );
+                }
+                if (el.type === "section-header") {
+                  return (
+                    <div key={j} style={{ textAlign: "center", marginBottom: `${scaledFont}px`, paddingTop: `${scaledFont * 2}px` }}>
+                      {SECTION_LABELS[el.sectionType] && (
+                        <div style={{ fontFamily, fontSize: `${scaledFont * 0.85}px`, letterSpacing: "0.15em", textTransform: "uppercase" as const, color: "#888", marginBottom: `${scaledFont * 0.3}px` }}>
+                          {SECTION_LABELS[el.sectionType]}
+                        </div>
+                      )}
+                      <div style={{ fontFamily, fontSize: `${scaledTitleFont}px`, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3 }}>
+                        {el.title}
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                    </div>
+                  );
+                }
+                if (el.type === "footnotes-heading") {
+                  return (
+                    <div key={j} style={{ marginTop: `${scaledFont * 1.2}px`, marginBottom: `${scaledFont * 0.4}px` }}>
+                      <div style={{ width: "30%", borderTop: "1px solid #888", marginBottom: `${scaledFont * 0.4}px` }} />
+                      <div style={{ fontFamily, fontSize: `${scaledFootnoteFont * 1.05}px`, fontWeight: 600, color: "#555", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+                        Notas
+                      </div>
+                    </div>
+                  );
+                }
+                if (el.type === "footnote-item") {
+                  return (
+                    <div key={j} style={{ fontFamily, fontSize: `${scaledFootnoteFont}px`, lineHeight: 1.4, color: "#444", display: "flex", gap: "4px", marginBottom: `${scaledFootnoteFont * 0.3}px`, textAlign: "left" }}>
+                      <sup style={{ fontWeight: 600 }}>{el.n}</sup>
+                      <span style={{ flex: 1 }}>{el.content || <em style={{ color: "#aaa" }}>(sin contenido)</em>}</span>
+                    </div>
+                  );
+                }
+                return (
+                  <p key={j} style={{ margin: 0, textIndent: el.indent ? `${scaledFont * 1.5}px` : "0" }}>
+                    {renderSegments(el.segments)}
+                  </p>
+                );
+              })}
             </div>
 
             {/* Page number */}
