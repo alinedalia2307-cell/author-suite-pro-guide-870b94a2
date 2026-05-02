@@ -172,6 +172,27 @@ export default function LayoutPanel({ bookId }: Props) {
         isFirstPage = false;
       }
 
+      // ── Phase 2.1 parallel renderer (flag-gated, default OFF) ──────────
+      // When enabled, paint the body from PageContent produced by the
+      // shared pagination engine. Cover (above) is unchanged.
+      if (USE_PAGECONTENT_RENDERER) {
+        const pages = buildPages(chapters, {
+          pageW: activePage.w, pageH: activePage.h,
+          marginH, marginV, marginInner,
+          fontSize, lineHeight, subchapterMode,
+          insertBlankPages, scale, footnotes: allFootnotes,
+        });
+        renderPagesToPdf(
+          pdf,
+          pages,
+          { pageW, pageH, marginH: mH, marginV: mV, marginInner: mInner, fontSize: fSize, lineHeight },
+          !!cover,
+        );
+        pdf.save(`${cover?.title || "libro"}.pdf`);
+        toast({ title: "PDF exportado", description: `${pages.length} páginas generadas correctamente.` });
+        return;
+      }
+
       const sorted = sortChaptersForLayout(chapters);
 
       let pageNum = cover ? 2 : 1;
