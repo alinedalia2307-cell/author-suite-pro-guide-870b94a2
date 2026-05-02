@@ -108,9 +108,9 @@ export default function LayoutPanel({ bookId }: Props) {
     if (!chapters.length) return 0;
     return buildPages(chapters, {
       pageW: activePage.w, pageH: activePage.h, marginH, marginV, marginInner,
-      fontSize, lineHeight, subchapterMode, insertBlankPages, scale,
+      fontSize, lineHeight, subchapterMode, insertBlankPages, scale, footnotes: allFootnotes,
     }).length;
-  }, [chapters, activePage, marginH, marginV, marginInner, fontSize, lineHeight, subchapterMode, insertBlankPages, scale]);
+  }, [chapters, allFootnotes, activePage, marginH, marginV, marginInner, fontSize, lineHeight, subchapterMode, insertBlankPages, scale]);
 
   // PDF export
   const handleExport = async () => {
