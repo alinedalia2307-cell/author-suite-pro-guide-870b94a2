@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useChapters, Chapter } from "@/hooks/useChapters";
+import { useChapters } from "@/hooks/useChapters";
 import { useAllFootnotes, FOOTNOTE_REGEX } from "@/hooks/useFootnotes";
 import { useBookCover } from "@/hooks/useBookCover";
 import { useToast } from "@/hooks/use-toast";
