@@ -22,7 +22,7 @@ import { renderPagesToPdf } from "@/lib/layout/renderPdf";
 // Feature flag for the new PageContent-based PDF renderer.
 // Keep false until validated — flipping to true swaps the body of the PDF
 // (the cover is still drawn by the legacy code path before delegation).
-const USE_PAGECONTENT_RENDERER = false;
+const USE_PAGECONTENT_RENDERER = true;
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
